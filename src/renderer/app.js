@@ -543,7 +543,13 @@ window.api.onSettingsChanged(() => {
 
 (function bindHover() {
   const badge = document.getElementById('levelBadge');
-  window.addEventListener('pointermove', () => badge && badge.classList.add('visible'));
+  let hideTimer = null;
+  window.addEventListener('pointermove', () => {
+    if (!badge) return;
+    badge.classList.add('visible');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => badge.classList.remove('visible'), 1200);
+  });
 })();
 
 (async () => {

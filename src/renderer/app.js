@@ -545,8 +545,8 @@ window.api.onSettingsChanged(() => {
 
 (function bindHover() {
   const badge = document.getElementById('levelBadge');
-  stage.addEventListener('mouseenter', () => badge && badge.classList.add('visible'));
-  stage.addEventListener('mouseleave', () => badge && badge.classList.remove('visible'));
+  window.addEventListener('pointerenter', () => badge && badge.classList.add('visible'));
+  window.addEventListener('pointerleave', () => badge && badge.classList.remove('visible'));
 })();
 
 (async () => {

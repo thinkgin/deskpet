@@ -12,6 +12,8 @@ let chatWin = null;
 let settingsWin = null;
 let appearanceWin = null;
 let providerWin = null;
+let bubbleWin = null;
+let bubbleSize = { width: 80, height: 52 };
 let tray = null;
 let isQuitting = false;
 let petDrag = null; // 主进程驱动的拖拽状态：{ interval, startCursor, startBounds, lastCursor, idleTicks }
@@ -386,6 +388,55 @@ function createProviderWindow() {
     });
   }
   providerWin.on('closed', () => (providerWin = null));
+}
+
+function createBubbleWindow() {
+  bubbleWin = new BrowserWindow({
+    width: 272,
+    height: 180,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    show: false,
+    focusable: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  bubbleWin.setIgnoreMouseEvents(true);
+  bubbleWin.setAlwaysOnTop(true, 'screen-saver');
+  bubbleWin.loadFile(path.join(__dirname, 'src', 'renderer', 'bubble.html'));
+  bubbleWin.on('closed', () => (bubbleWin = null));
+}
+
+function placeBubble(width, height) {
+  if (!petWin || !bubbleWin) return;
+  const pb = petWin.getBounds();
+  const display = screen.getDisplayNearestPoint({ x: pb.x + Math.floor(pb.width / 2), y: pb.y + Math.floor(pb.height / 2) });
+  const wa = display.workArea;
+  const gap = 12;
+  const margin = 6;
+  let x;
+  let y;
+  // 上方优先；空间不足则下方。左右根据宠物靠近哪边对齐，气泡向屏幕内部延伸。
+  if (pb.y - wa.y >= height + gap) y = pb.y - height - gap;
+  else if (wa.y + wa.height - (pb.y + pb.height) >= height + gap) y = pb.y + pb.height + gap;
+  else {
+    y = Math.min(Math.max(pb.y + Math.round((pb.height - height) / 2), wa.y + margin), wa.y + wa.height - height - margin);
+  }
+  const petCenter = pb.x + pb.width / 2;
+  const screenCenter = wa.x + wa.width / 2;
+  if (petCenter < screenCenter) x = pb.x;
+  else x = pb.x + pb.width - width;
+  x = Math.min(Math.max(Math.round(x), wa.x + margin), wa.x + wa.width - width - margin);
+  y = Math.min(Math.max(Math.round(y), wa.y + margin), wa.y + wa.height - height - margin);
+  bubbleWin.setBounds({ x, y, width, height });
+  bubbleWin.showInactive();
 }
 
 function toggleProvider() {
@@ -896,6 +947,28 @@ ipcMain.on('pet:setBubbleLayout', (e, layout) => {
   reclampPetWindow();
 });
 
+ipcMain.on('pet:bubbleShow', (e, payload) => {
+  if (!bubbleWin) createBubbleWindow();
+  const send = () => {
+    if (!bubbleWin) return;
+    bubbleWin.webContents.send('pet:bubbleContent', payload || {});
+  };
+  if (bubbleWin.webContents.isLoading()) bubbleWin.webContents.once('did-finish-load', send);
+  else send();
+});
+
+ipcMain.on('pet:bubbleSize', (e, size) => {
+  const width = Math.min(Math.max(Math.round(Number(size && size.width) || 80), 64), 272);
+  const height = Math.min(Math.max(Math.round(Number(size && size.height) || 48), 44), 180);
+  bubbleSize = { width, height };
+  bubbleWin.setSize(width, height);
+  placeBubble(width, height);
+});
+
+ipcMain.on('pet:bubbleHide', () => {
+  if (bubbleWin) bubbleWin.hide();
+});
+
 // 点击穿透开关：鼠标在宠物像素上时 false（可交互），否则 true（穿透）
 ipcMain.on('pet:setClickThrough', (e, flag) => {
   if (!petWin) petWin = null;
@@ -953,6 +1026,7 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     createPetWindow();
+    createBubbleWindow();
     createTray();
     startReminders();
     startShutdownFromConfig();

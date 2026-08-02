@@ -26,7 +26,6 @@ let dragMoved = false;
 let hovered = false;
 let actionOpen = false;
 let bubbleTimer = null;
-let bubbleVisible = false;
 let baseWindowSize = { width: 120, height: 110 };
 let stateTick = 0;
 let lastHint = 0;
@@ -92,32 +91,17 @@ function playTone(freq, dur, type, vol, delay = 0) {
 function say(text, ms = 2600) {
   bubbleText.textContent = text;
   clearTimeout(bubbleTimer);
-  requestAnimationFrame(() => {
-    showBubbleLayout();
-    bubble.classList.add('show');
-  });
+  window.api.showPetBubble({ text, loading: false });
   bubbleTimer = setTimeout(hideBubble, ms);
 }
 
-function showBubbleLayout() {
-  bubbleVisible = true;
-  bubble.style.maxHeight = 'none';
-  bubble.style.overflow = 'visible';
-  const rect = bubble.getBoundingClientRect();
-  window.api.setBubbleLayout({
-    visible: true,
-    baseWidth: baseWindowSize.width,
-    baseHeight: baseWindowSize.height,
-    bubbleWidth: Math.ceil(rect.width),
-    bubbleHeight: Math.ceil(rect.height),
-    gap: 14,
-  });
+function showBubbleLoading() {
+  clearTimeout(bubbleTimer);
+  window.api.showPetBubble({ text: '', loading: true });
 }
 
 function hideBubble() {
-  bubbleVisible = false;
-  bubble.classList.remove('show');
-  window.api.setBubbleLayout({ visible: false, baseWidth: baseWindowSize.width, baseHeight: baseWindowSize.height });
+  window.api.hidePetBubble();
 }
 
 function hideActions() {
@@ -153,6 +137,7 @@ async function tapPet() {
   playS('meow');
   // 优先走 AI 模型回答
   try {
+    showBubbleLoading();
     const reply = await window.api.tapAI();
     if (reply) {
       say(reply, 3200);
@@ -160,6 +145,7 @@ async function tapPet() {
       return;
     }
   } catch { /* 网络/模型异常，兜底预设 */ }
+  hideBubble();
   say(cuteDialogues[Math.floor(Math.random() * cuteDialogues.length)]);
   setTimeout(() => engine.play('idle'), 900);
 }
@@ -212,8 +198,7 @@ function resizeWindow() {
   const w = Math.max(Math.round(s.w * k) + 40, 120);
   const h = Math.max(Math.round(s.h * k) + 60, 110);
   baseWindowSize = { width: w, height: h };
-  if (bubbleVisible) showBubbleLayout();
-  else window.api.setWindowSize(w, h);
+  window.api.setWindowSize(w, h);
 }
 
 function applyDecay(since) {
@@ -419,22 +404,6 @@ function update(dt) {
 
 // 气泡锚定在宠物头顶：窗口在 DPI 缩放下可能被系统微调尺寸，canvas 是底部对齐的，
 // 若只靠 CSS top:4px 定位，窗口变高时气泡会与宠物分离；这里每帧跟随画布位置。
-function positionBubble() {
-  const pad = 14;
-  const sr = stage.getBoundingClientRect();
-  const cr = canvas.getBoundingClientRect();
-  const bh = bubble.offsetHeight || 34;
-  let left = cr.left - sr.left + cr.width / 2;
-  let top = cr.top - sr.top - bh - pad;
-  // 主进程调整透明窗口后立即重定位，保证气泡底边始终与宠物头顶相隔 pad。
-  if (bubbleVisible && top < 0) {
-    requestAnimationFrame(positionBubble);
-    return;
-  }
-  bubble.style.left = left + 'px';
-  bubble.style.top = top + 'px';
-}
-
 function tick() {
   const now = performance.now();
   const dt = Math.min((now - lastTick) / 1000, 0.1);
@@ -465,7 +434,6 @@ function tick() {
   }
 
   update(dt);
-  positionBubble();
   requestAnimationFrame(tick);
 }
 

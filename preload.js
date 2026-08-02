@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld('api', {
   getChatBounds: () => ipcRenderer.invoke('chat:getBounds'),
   setWindowSize: (width, height) => ipcRenderer.send('pet:setWindowSize', { width, height }),
   setBubbleLayout: (layout) => ipcRenderer.send('pet:setBubbleLayout', layout),
+  showPetBubble: (payload) => ipcRenderer.send('pet:bubbleShow', payload),
+  hidePetBubble: () => ipcRenderer.send('pet:bubbleHide'),
+  reportBubbleSize: (width, height) => ipcRenderer.send('pet:bubbleSize', { width, height }),
   setClickThrough: (flag) => ipcRenderer.send('pet:setClickThrough', flag),
   notify: (title, body) => ipcRenderer.send('notify', { title, body }),
   toggleChat: () => ipcRenderer.send('chat:toggle'),
@@ -46,5 +49,6 @@ contextBridge.exposeInMainWorld('api', {
   onPetDragEnd: (cb) => ipcRenderer.on('pet:dragEnd', () => cb()),
   onChatOpen: (cb) => ipcRenderer.on('chat:open', () => cb()),
   onSettingsChanged: (cb) => ipcRenderer.on('settings:changed', () => cb()),
+  onBubbleContent: (cb) => ipcRenderer.on('pet:bubbleContent', (e, payload) => cb(payload)),
   platform: process.platform,
 });

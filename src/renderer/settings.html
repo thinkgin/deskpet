@@ -153,8 +153,6 @@
   <div class="field">
     <label>用来对话的 Provider</label>
     <select id="activeProviderId"></select>
-    <div class="hint" style="margin-bottom:6px">选择一个已添加的 Provider 来对话。</div>
-    <button id="openProvider" class="mini-btn primary" style="width:100%">管理提供商 →</button>
   </div>
 
   <div class="field" id="activeModelBox">
@@ -174,6 +172,17 @@
     </select>
     <div class="hint">对应 reasoningEffort（仅 AI Provider 支持时生效）。</div>
   </div>
+
+  <div class="field">
+    <label>已添加的提供商</label>
+    <div id="provList"></div>
+    <button id="provAdd" class="mini-btn" style="width:100%;margin-top:4px">＋ 新增一个 Provider</button>
+  </div>
+
+  <details id="presetBlock" style="margin-top:4px">
+    <summary style="font-size:12px;color:#a08a72;cursor:pointer;padding:4px 0">从热门预设添加 …</summary>
+    <div id="presetList" style="margin-top:6px"></div>
+  </details>
 
   <button id="saveAlso">保存以上设置（不重载宠物）</button>
   <button id="save">保存设置并重载宠物</button>

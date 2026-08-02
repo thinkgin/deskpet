@@ -545,8 +545,12 @@ window.api.onSettingsChanged(() => {
 
 (function bindHover() {
   const badge = document.getElementById('levelBadge');
-  window.addEventListener('pointerenter', () => badge && badge.classList.add('visible'));
-  window.addEventListener('pointerleave', () => badge && badge.classList.remove('visible'));
+  let hoverTimer = null;
+  window.addEventListener('pointermove', () => {
+    if (badge) badge.classList.add('visible');
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => badge && badge.classList.remove('visible'), 1800);
+  });
 })();
 
 (async () => {

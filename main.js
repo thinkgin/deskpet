@@ -304,10 +304,12 @@ function createChatWindow() {
 
 function createSettingsWindow() {
   settingsWin = new BrowserWindow({
-    width: 420,
-    height: 540,
+    width: 460,
+    height: 720,
     frame: true,
-    resizable: false,
+    resizable: true,
+    minWidth: 400,
+    minHeight: 600,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

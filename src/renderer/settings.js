@@ -23,6 +23,9 @@ const activeProviderId = document.getElementById('activeProviderId');
 const activeModel = document.getElementById('activeModel');
 const activeModelBox = document.getElementById('activeModelBox');
 const openProvider = document.getElementById('openProvider');
+const provList = document.getElementById('provList');
+const provAdd = document.getElementById('provAdd');
+const presetList = document.getElementById('presetList');
 
 const saveBtn = document.getElementById('save');
 const saveAlsoBtn = document.getElementById('saveAlso');
@@ -34,6 +37,7 @@ const PETS = [
 
 let settings = null;
 let providers = [];
+let presets = [];
 
 function flash(msg) {
   statusEl.textContent = msg;
@@ -54,6 +58,100 @@ function computeAge(birthday) {
 
 function updateAgeText() {
   petAgeText.value = computeAge(petBirthday.value);
+}
+
+function renderProvList() {
+  provList.innerHTML = '';
+  if (!providers.length) {
+    const d = document.createElement('div');
+    d.className = 'hint';
+    d.textContent = '还没有添加 Provider，从下方预设添加或点新增按钮。';
+    provList.appendChild(d);
+    return;
+  }
+  providers.forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'prov-card' + (String(settings.activeProviderId) === p.id ? ' active' : '');
+    const info = document.createElement('div');
+    info.className = 'info';
+    const b = document.createElement('b');
+    b.textContent = p.name;
+    const s = document.createElement('span');
+    const models = (Array.isArray(p.models) ? p.models.map((m) => m.model).join(' / ') : '');
+    s.textContent = (p.baseUrl || '') + (models ? ' · ' + models : '');
+    info.appendChild(b);
+    info.appendChild(s);
+    const acts = document.createElement('div');
+    acts.className = 'prov-actions';
+    const selBtn = document.createElement('button');
+    selBtn.className = 'mini-btn primary';
+    selBtn.textContent = '选用';
+    selBtn.addEventListener('click', () => {
+      settings.activeProviderId = p.id;
+      renderProviderSelect();
+      renderProvList();
+      renderModelSelect();
+      flash('已选用「' + p.name + '」');
+    });
+    const delBtn = document.createElement('button');
+    delBtn.className = 'mini-btn danger';
+    delBtn.textContent = '删';
+    delBtn.addEventListener('click', () => {
+      providers = providers.filter((x) => x.id !== p.id);
+      if (settings.activeProviderId === p.id) settings.activeProviderId = '';
+      renderProviderSelect();
+      renderProvList();
+      renderModelSelect();
+    });
+    acts.appendChild(selBtn);
+    acts.appendChild(delBtn);
+    card.appendChild(info);
+    card.appendChild(acts);
+    provList.appendChild(card);
+  });
+}
+
+function renderPresetsInline() {
+  presetList.innerHTML = '';
+  presets.forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'prov-card';
+    const info = document.createElement('div');
+    info.className = 'info';
+    const b = document.createElement('b');
+    b.textContent = p.name;
+    const sp = document.createElement('span');
+    sp.textContent = (p.baseUrl || '') + ' · ' + (p.models ? p.models.length + ' 个模型' : '');
+    info.appendChild(b);
+    info.appendChild(sp);
+    const acts = document.createElement('div');
+    acts.className = 'prov-actions';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'mini-btn primary';
+    const already = providers.some((x) => x.baseUrl === p.baseUrl);
+    if (already) { addBtn.textContent = '已添加'; addBtn.disabled = true; }
+    else addBtn.textContent = '+ 添加';
+    addBtn.addEventListener('click', () => {
+      if (already) return;
+      const name = prompt('Provider 显示名称', p.name);
+      if (name === null) return;
+      const key = prompt('API Key（可留空）', '');
+      if (key === null) return;
+      const id = 'prov' + Date.now();
+      providers.push({
+        id, name: name.trim(), baseUrl: p.baseUrl, apiKey: key.trim(), apiType: p.apiType || 'openai',
+        models: (p.models || []).map((m) => ({ model: m.model, label: m.label || m.model })),
+      });
+      renderProviderSelect();
+      renderProvList();
+      renderPresetsInline();
+      flash('已添加「' + name + '」');
+    });
+    acts.appendChild(addBtn);
+    card.appendChild(info);
+    card.appendChild(acts);
+    presetList.appendChild(card);
+  });
 }
 
 function renderProviderSelect() {
@@ -163,8 +261,12 @@ function onShutdownModeChange() {
 
   autoStart.checked = await window.api.getAutoStart();
 
+  try { presets = (await window.api.getProviderPresets()) || []; } catch (e) { presets = []; }
+
   renderProviderSelect();
   renderModelSelect();
+  renderProvList();
+  renderPresetsInline();
   loadShutdownStatus();
   onShutdownModeChange();
 })();
@@ -194,6 +296,28 @@ shutdownCancel.addEventListener('click', async () => {
 
 openProvider.addEventListener('click', () => {
   window.api.openProviderPage();
+});
+
+provAdd.addEventListener('click', () => {
+  const name = prompt('Provider 名称', '自定义中转');
+  if (name === null) return;
+  const baseUrl = prompt('接口地址', 'https://api.openai.com/v1');
+  if (baseUrl === null) return;
+  const apiKey = prompt('API Key', '');
+  if (apiKey === null) return;
+  const modelsText = prompt('模型列表（每行一个）', 'gpt-4o-mini');
+  if (modelsText === null) return;
+  const models = modelsText.split('\n').map((x) => x.trim()).filter(Boolean);
+  const id = 'prov' + Date.now();
+  providers.push({
+    id, name: name.trim(), baseUrl: baseUrl.trim(), apiKey: apiKey.trim(), apiType: 'openai',
+    models: models.map((m) => ({ model: m, label: m })),
+  });
+  settings.activeProviderId = id;
+  renderProviderSelect();
+  renderProvList();
+  renderModelSelect();
+  flash('已新增「' + name + '」');
 });
 
 activeProviderId.addEventListener('change', () => {

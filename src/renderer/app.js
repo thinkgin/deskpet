@@ -341,6 +341,10 @@ function doAction(act) {
       window.api.openAppearance();
       break;
     }
+    case 'providers': {
+      window.api.openProviderPage();
+      break;
+    }
     case 'settings': {
       window.api.openSettings();
       break;

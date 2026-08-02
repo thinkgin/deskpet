@@ -383,13 +383,13 @@ function update(dt) {
 // 气泡锚定在宠物头顶：窗口在 DPI 缩放下可能被系统微调尺寸，canvas 是底部对齐的，
 // 若只靠 CSS top:4px 定位，窗口变高时气泡会与宠物分离；这里每帧跟随画布位置。
 function positionBubble() {
-  const pad = 8;
+  const pad = 14;
   const sr = stage.getBoundingClientRect();
   const cr = canvas.getBoundingClientRect();
   const bh = bubble.offsetHeight || 34;
   let left = cr.left - sr.left + cr.width / 2;
   let top = cr.top - sr.top - bh - pad;
-  if (top < 2) top = 2;
+  if (top < 6) top = 6;
   bubble.style.left = left + 'px';
   bubble.style.top = top + 'px';
 }
@@ -433,6 +433,8 @@ window.addEventListener('pointerleave', () => {
     window.api.setClickThrough(true);
     if (actionOpen) hideActions();
   }
+  const badge = document.getElementById('levelBadge');
+  if (badge) badge.classList.remove('visible');
 });
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -542,7 +544,6 @@ window.api.onSettingsChanged(() => {
 (function bindHover() {
   const badge = document.getElementById('levelBadge');
   window.addEventListener('pointermove', () => badge && badge.classList.add('visible'));
-  window.addEventListener('pointerleave', () => badge && badge.classList.remove('visible'));
 })();
 
 (async () => {

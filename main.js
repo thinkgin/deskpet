@@ -396,21 +396,25 @@ function toggleChat() {
   if (chatWin.isVisible()) {
     chatWin.hide();
   } else {
-    // 让聊天窗口出现在宠物旁边（避免和宠物离得太远）
+    // 让聊天窗口出现在宠物旁边且留出间距，绝不盖住宠物头部
     const wa = screen.getPrimaryDisplay().workArea;
     const cw = chatWin.getBounds();
+    const gap = 16;
     let x = wa.x + wa.width - cw.width - 20;
     let y = wa.y + wa.height - cw.height - 60;
     if (petWin) {
       const pb = petWin.getBounds();
-      if (pb.x + pb.width + 12 + cw.width <= wa.x + wa.width) {
-        x = pb.x + pb.width + 12;
-      } else {
-        x = pb.x - cw.width - 12;
+      // 默认放宠物右侧，顶部与宠物顶部对齐，右侧留 gap 避免压到头
+      x = pb.x + pb.width + gap;
+      y = pb.y;
+      // 右侧放不下：改放宠物正下方（垂直错开，不覆盖）
+      if (x + cw.width > wa.x + wa.width) {
+        x = pb.x + (pb.width - cw.width) / 2;
+        y = pb.y + pb.height + gap;
       }
-      y = pb.y - 30;
     }
-    y = Math.max(wa.y + 10, Math.min(y, wa.y + wa.height - cw.height - 10));
+    x = Math.min(Math.max(x, wa.x + 10), wa.x + wa.width - cw.width - 10);
+    y = Math.min(Math.max(y, wa.y + 10), wa.y + wa.height - cw.height - 10);
     chatWin.setPosition(x, y);
     chatWin.show();
     chatWin.focus();

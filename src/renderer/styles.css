@@ -62,7 +62,7 @@ html, body {
 
 #levelBadge {
   position: absolute;
-  bottom: 2px;
+  top: 2px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(43, 32, 27, 0.85);
@@ -75,6 +75,12 @@ html, body {
   pointer-events: none;
   z-index: 4;
   white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+#stage:hover #levelBadge {
+  opacity: 1;
 }
 
 #bubble::after {

@@ -562,7 +562,7 @@ ipcMain.on('settings:close', () => {
 });
 ipcMain.handle('chat:send', (e, messages) => chatAI(messages));
 ipcMain.handle('greeting:get', () => ({ greeting: getGreeting(), festival: getFestival() }));
-ipcMain.handle('providers:presets', () => OPENCODE_PRESETS.map((p, i) => ({ id: `template-${i}`, ...p, apiKey: '' })));
+ipcMain.handle('providers:get', () => OPENCODE_PRESETS.map((p, i) => ({ id: `template-${i}`, ...p, apiKey: '' })));
 
 // ---------- 聊天记忆（memory.json） ----------
 let memoryCache = null;

@@ -153,10 +153,8 @@
   <div class="field">
     <label>用来对话的 Provider</label>
     <select id="activeProviderId"></select>
-    <div class="hint">
-      选择「自定义单配置」使用下方 Legacy 字段；或选一个已添加的 Provider。
-      <a href="#" id="openProvider">管理提供商 …</a>
-    </div>
+    <div class="hint" style="margin-bottom:6px">选择一个已添加的 Provider 来对话。</div>
+    <button id="openProvider" class="mini-btn primary" style="width:100%">管理提供商 →</button>
   </div>
 
   <div class="field" id="activeModelBox">
@@ -175,20 +173,6 @@
       <option value="xhigh">极高</option>
     </select>
     <div class="hint">对应 reasoningEffort（仅 AI Provider 支持时生效）。</div>
-  </div>
-
-  <div class="field">
-    <label>自定义单配置 · API Key</label>
-    <input type="password" id="aiApiKey" placeholder="sk-..." autocomplete="off" />
-    <div class="hint">勾选 Provider 时才用上方配置；此处是 fallback。留空用内置可爱回复。</div>
-  </div>
-  <div class="field">
-    <label>自定义单配置 · 接口地址</label>
-    <input type="text" id="aiBaseUrl" placeholder="https://api.openai.com/v1" />
-  </div>
-  <div class="field">
-    <label>自定义单配置 · 模型</label>
-    <input type="text" id="aiModel" placeholder="gpt-3.5-turbo" />
   </div>
 
   <button id="saveAlso">保存以上设置（不重载宠物）</button>

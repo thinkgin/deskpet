@@ -7,9 +7,6 @@ const petAgeText = document.getElementById('petAgeText');
 const petScale = document.getElementById('petScale');
 const soundOn = document.getElementById('soundOn');
 const autoWalk = document.getElementById('autoWalk');
-const aiApiKey = document.getElementById('aiApiKey');
-const aiBaseUrl = document.getElementById('aiBaseUrl');
-const aiModel = document.getElementById('aiModel');
 
 const autoStart = document.getElementById('autoStart');
 const shutdownMode = document.getElementById('shutdownMode');
@@ -21,14 +18,10 @@ const shutdownStatus = document.getElementById('shutdownStatus');
 const shutdownGo = document.getElementById('shutdownGo');
 const shutdownCancel = document.getElementById('shutdownCancel');
 
-const provList = document.getElementById('provList');
-const provAdd = document.getElementById('provAdd');
-const presetSel = document.getElementById('presetSel');
-const presetAdd = document.getElementById('presetAdd');
+const activeEffort = document.getElementById('activeEffort');
 const activeProviderId = document.getElementById('activeProviderId');
 const activeModel = document.getElementById('activeModel');
 const activeModelBox = document.getElementById('activeModelBox');
-const activeEffort = document.getElementById('activeEffort');
 const openProvider = document.getElementById('openProvider');
 
 const saveBtn = document.getElementById('save');
@@ -41,7 +34,6 @@ const PETS = [
 
 let settings = null;
 let providers = [];
-const LEGACY_ID = 'custom';
 
 function flash(msg) {
   statusEl.textContent = msg;
@@ -66,17 +58,19 @@ function updateAgeText() {
 
 function renderProviderSelect() {
   activeProviderId.innerHTML = '';
-  const optLegend = document.createElement('option');
-  optLegend.value = LEGACY_ID;
-  optLegend.textContent = '自定义单配置（下方 API Key / 地址 / 模型）';
-  activeProviderId.appendChild(optLegend);
+  if (!providers.length) {
+    const o = document.createElement('option');
+    o.value = '';
+    o.textContent = '暂无提供商，请点击下方按钮添加';
+    activeProviderId.appendChild(o);
+  }
   providers.forEach((p) => {
     const o = document.createElement('option');
     o.value = p.id;
     o.textContent = p.name || ('Provider ' + p.id);
     activeProviderId.appendChild(o);
   });
-  activeProviderId.value = String(settings.activeProviderId || LEGACY_ID);
+  activeProviderId.value = String(settings.activeProviderId || '');
 }
 
 function currentProvider() {
@@ -165,9 +159,6 @@ function onShutdownModeChange() {
   petScale.value = String(Math.min(Math.max(Number(settings.petScale) || 5, 3), 12));
   soundOn.checked = settings.soundOn !== false;
   autoWalk.checked = settings.autoWalk !== false;
-  aiApiKey.value = settings.aiApiKey || '';
-  aiBaseUrl.value = settings.aiBaseUrl || 'https://api.openai.com/v1';
-  aiModel.value = settings.aiModel || 'gpt-3.5-turbo';
   activeEffort.value = settings.activeReasoningEffort || 'medium';
 
   autoStart.checked = await window.api.getAutoStart();
@@ -201,12 +192,7 @@ shutdownCancel.addEventListener('click', async () => {
   flash('已取消定时关机 ✔�');
 });
 
-openProvider.addEventListener('click', (e) => {
-  e.preventDefault();
-  window.api.openProviderPage();
-});
-
-provAdd.addEventListener('click', () => {
+openProvider.addEventListener('click', () => {
   window.api.openProviderPage();
 });
 
@@ -234,9 +220,6 @@ function collect() {
     petScale: Number(petScale.value) || 5,
     soundOn: soundOn.checked,
     autoWalk: autoWalk.checked,
-    aiApiKey: aiApiKey.value.trim(),
-    aiBaseUrl: aiBaseUrl.value.trim() || 'https://api.openai.com/v1',
-    aiModel: aiModel.value.trim() || 'gpt-3.5-turbo',
     providers,
     activeProviderId: settings.activeProviderId,
     activeModel: settings.activeModel,

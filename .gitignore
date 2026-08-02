@@ -26,4 +26,5 @@ Thumbs.db
 
 # user data (never commit app runtime data)
 settings.json
-state.json
+state.jsondist-final/
+cdp-*.js

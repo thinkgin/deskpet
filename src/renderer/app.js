@@ -152,6 +152,7 @@ async function loadAll() {
   // 注册自定义形象到 pets 注册表（custom:0 ~ custom:5）
   if (Array.isArray(settings.customPets)) {
     settings.customPets.forEach((cp, i) => {
+      if (cp) cp = pc.migrateCustom(cp);
       if (cp && cp.base) {
         pets['custom:' + i] = pc.buildPetDef({
           id: 'custom:' + i,
@@ -169,8 +170,10 @@ async function loadAll() {
 }
 
 function resizeWindow() {
-  const w = Math.max(16 * petScale + 40, 120);
-  const h = Math.max(16 * petScale + 60, 110);
+  const def = pets[currentPetId] || cat;
+  const s = def.size || { w: 16, h: 16 };
+  const w = Math.max(s.w * petScale + 40, 120);
+  const h = Math.max(s.h * petScale + 60, 110);
   window.api.setWindowSize(w, h);
 }
 

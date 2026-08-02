@@ -14,7 +14,7 @@ const eraserBtn = document.getElementById('eraser');
 const clearBtn = document.getElementById('clearBtn');
 const statusEl = document.getElementById('status');
 
-const CELL = 24; // 像素画布每格 24px（16x16 = 384）
+const CELL = 20; // 像素画布每格 20px（20x20 = 400）
 let customPets = [null, null, null, null, null, null];
 let activePetId = 'cat';
 let currentSlot = -1; // -1 系统，0~5 自定义
@@ -28,23 +28,23 @@ const SLOT_CNT = 6;
 
 // ---------- 画布基础 ----------
 function blankGrid() {
-  return Array.from({ length: 16 }, () => Array(16).fill('.'));
+  return Array.from({ length: pc.H }, () => Array(pc.W).fill('.'));
 }
 function toRows(g) {
   return g.map((r) => r.join(''));
 }
 function fromRows(arr) {
-  return arr.map((s) => String(s).padEnd(16, '.').split(''));
+  return arr.map((s) => String(s).padEnd(pc.W, '.').split(''));
 }
 function setPx(g, x, y, c) {
-  if (x >= 0 && x < 16 && y >= 0 && y < 16) g[y][x] = c;
+  if (x >= 0 && x < pc.W && y >= 0 && y < pc.H) g[y][x] = c;
 }
 
 function drawPixelGrid(ctx, base, scale, palette) {
   const g = fromRows(base);
   ctx.imageSmoothingEnabled = false;
-  for (let y = 0; y < 16; y++) {
-    for (let x = 0; x < 16; x++) {
+  for (let y = 0; y < pc.H; y++) {
+    for (let x = 0; x < pc.W; x++) {
       const ch = g[y][x];
       const color = ch && ch !== '.' ? (palette[ch] || '#fff') : '#faf5ee';
       ctx.fillStyle = color;
@@ -53,9 +53,9 @@ function drawPixelGrid(ctx, base, scale, palette) {
   }
   ctx.strokeStyle = 'rgba(74,59,53,0.12)';
   ctx.lineWidth = 1;
-  for (let i = 1; i < 16; i++) {
-    ctx.beginPath(); ctx.moveTo(i * scale, 0); ctx.lineTo(i * scale, 16 * scale); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i * scale); ctx.lineTo(16 * scale, i * scale); ctx.stroke();
+  for (let i = 1; i < pc.W; i++) {
+    ctx.beginPath(); ctx.moveTo(i * scale, 0); ctx.lineTo(i * scale, pc.H * scale); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i * scale); ctx.lineTo(pc.W * scale, i * scale); ctx.stroke();
   }
 }
 
@@ -88,12 +88,13 @@ function refreshPreview() {
 
 // ---------- 槽位缩略图 ----------
 function slotThumb(base, palette) {
+  const rowsArr = Array.isArray(base) ? base : String(base).split('\n');
+  const th = rowsArr.length, tw = rowsArr[0] ? rowsArr[0].length : 0;
   const c = document.createElement('canvas');
-  c.width = 16; c.height = 16;
+  c.width = tw; c.height = th;
   const ctx = c.getContext('2d');
-  const g = fromRows(base);
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-    const ch = g[y][x];
+  for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) {
+    const ch = rowsArr[y][x];
     if (ch && ch !== '.') { ctx.fillStyle = palette[ch] || '#fff'; ctx.fillRect(x, y, 1, 1); }
   }
   return c;
@@ -218,7 +219,7 @@ function paintCell(ev) {
   const scaleY = pixCanvas.height / rect.height;
   const x = Math.floor((ev.clientX - rect.left) * scaleX / CELL);
   const y = Math.floor((ev.clientY - rect.top) * scaleY / CELL);
-  if (x < 0 || x >= 16 || y < 0 || y >= 16) return;
+  if (x < 0 || x >= pc.W || y < 0 || y >= pc.H) return;
   const g = fromRows(editing.base);
   if (ev.button === 2) {
     setPx(g, x, y, '.');
@@ -401,7 +402,7 @@ window.addEventListener('keydown', (e) => {
 // ---------- 初始化 ----------
 (async () => {
   const data = await window.api.getAppearance();
-  customPets = (data.customPets || [null, null, null, null, null, null]).slice(0, 6);
+  customPets = ((data.customPets || [null, null, null, null, null, null]).slice(0, 6)).map((cp) => pc.migrateCustom(cp ? { ...cp } : cp));
   activePetId = data.activePetId || 'cat';
   refreshSlots();
   bindSlotClicks();

@@ -242,12 +242,12 @@ function createSettingsWindow() {
 
 function createAppearanceWindow() {
   appearanceWin = new BrowserWindow({
-    width: 760,
-    height: 620,
+    width: 780,
+    height: 650,
     frame: true,
     resizable: true,
-    minWidth: 720,
-    minHeight: 560,
+    minWidth: 740,
+    minHeight: 580,
     show: false,
     title: '形象面板',
     webPreferences: {
@@ -513,7 +513,7 @@ ipcMain.on('settings:open', () => toggleSettings());
 ipcMain.on('settings:close', () => {
   if (settingsWin) settingsWin.hide();
 });
-ipcMain.on('chat:send', (e, messages) => chatAI(messages));
+ipcMain.handle('chat:send', (e, messages) => chatAI(messages));
 ipcMain.handle('greeting:get', () => ({ greeting: getGreeting(), festival: getFestival() }));
 // 计算宠物窗口应停留的边界（DIP 坐标）。
 // 用固定期望尺寸 petWinSize：非 100% DPI 下透明窗口实际尺寸会被系统反复取整膨胀，

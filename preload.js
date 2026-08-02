@@ -32,6 +32,8 @@ contextBridge.exposeInMainWorld('api', {
   saveAppearance: (data) => ipcRenderer.invoke('appearance:save', data),
   openSettings: () => ipcRenderer.send('settings:open'),
   closeSettings: () => ipcRenderer.send('settings:close'),
+  openProviderPage: () => ipcRenderer.send('providers:open'),
+  closeProviderPage: () => ipcRenderer.send('providers:close'),
   getAutoStart: () => ipcRenderer.invoke('autostart:get'),
   setAutoStart: (enabled) => ipcRenderer.invoke('autostart:set', enabled),
   getShutdownStatus: () => ipcRenderer.invoke('shutdown:getStatus'),

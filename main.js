@@ -11,6 +11,7 @@ let petWin = null;
 let chatWin = null;
 let settingsWin = null;
 let appearanceWin = null;
+let providerWin = null;
 let tray = null;
 let isQuitting = false;
 let petDrag = null; // 主进程驱动的拖拽状态：{ interval, startCursor, startBounds, lastCursor, idleTicks }
@@ -57,13 +58,70 @@ const defaultSettings = {
   shutdownConfig: { mode: 'off', minutes: 60, time: '22:00', shutdownAt: 0 },
 };
 
-// opencode 风格的热门 Provider 模板（仅预设地址/模型，不含 user key）
+// 热门 Provider 模板 — 1:1 复刻 opencode 提供商设置（仅预设地址/模型，不含 Key）
 const OPENCODE_PRESETS = [
-  { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiType: 'openai', models: [{ model: 'gpt-4o-mini', label: 'GPT-4o-mini' }, { model: 'gpt-4o', label: 'GPT-4o' }] },
-  { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', apiType: 'openai', models: [{ model: 'deepseek-chat', label: 'DeepSeek-V3' }, { model: 'deepseek-reasoner', label: 'DeepSeek-R1' }] },
-  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', apiType: 'openai', models: [{ model: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' }, { model: 'openai/gpt-4o', label: 'GPT-4o' }] },
-  { name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', apiType: 'openai', models: [{ model: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' }, { model: 'qwen/qwen2.5-72b', label: 'Qwen 2.5 72B' }] },
-  { name: 'Ollama（本地）', baseUrl: 'http://localhost:11434/v1', apiType: 'openai', models: [{ model: 'qwen2.5:7b', label: 'Qwen 2.5 7B' }, { model: 'llama3.1:8b', label: 'Llama 3.1 8B' }] },
+  // ---- 你的 opencode 网关 ----
+  { name: 'KKLT · xiaohuang（gpt-5.x/grok）', baseUrl: 'https://api.kklt.lol/v1', apiType: 'openai', models: [
+    { model: 'gpt-5.4', label: 'gpt-5.4' },
+    { model: 'gpt-5.5', label: 'gpt-5.5' },
+    { model: 'gpt-5.6-sol', label: 'gpt-5.6-sol' },
+    { model: 'gpt-5.6-terra', label: 'gpt-5.6-terra' },
+    { model: 'grok-4.5', label: 'grok-4.5' },
+  ]},
+  { name: '443 AI（gpt-5.x系列）', baseUrl: 'https://api.443.hk/v1', apiType: 'openai', models: [
+    { model: 'gpt-5.4', label: 'gpt-5.4' },
+    { model: 'gpt-5.5', label: 'gpt-5.5' },
+    { model: 'gpt-5.6-sol', label: 'gpt-5.6-sol' },
+    { model: 'gpt-5.6-terra', label: 'gpt-5.6-terra' },
+    { model: 'gpt-5.6-luna', label: 'gpt-5.6-luna' },
+  ]},
+  { name: '443 Claude（claude-opus系列）', baseUrl: 'https://api.443.hk/v1', apiType: 'openai', models: [
+    { model: 'claude-opus-4-7', label: 'claude-opus-4-7' },
+    { model: 'claude-opus-4-8', label: 'claude-opus-4-8' },
+  ]},
+  // ---- 主流厂商 ----
+  { name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', apiType: 'openai', models: [
+    { model: 'gpt-4o-mini', label: 'GPT-4o-mini' },
+    { model: 'gpt-4o', label: 'GPT-4o' },
+    { model: 'gpt-4.1-nano', label: 'GPT-4.1-nano' },
+    { model: 'o4-mini', label: 'O4-mini' },
+  ]},
+  { name: 'Anthropic 官方', baseUrl: 'https://api.anthropic.com/v1', apiType: 'anthropic', models: [
+    { model: 'claude-sonnet-4-5', label: 'Claude Sonnet 4' },
+    { model: 'claude-opus-4-5', label: 'Claude Opus 4' },
+    { model: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
+    { model: 'claude-3.5-haiku', label: 'Claude 3.5 Haiku' },
+  ]},
+  { name: 'DeepSeek 官方', baseUrl: 'https://api.deepseek.com/v1', apiType: 'openai', models: [
+    { model: 'deepseek-chat', label: 'DeepSeek-V3' },
+    { model: 'deepseek-reasoner', label: 'DeepSeek-R1' },
+  ]},
+  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', apiType: 'openai', models: [
+    { model: 'anthropic/claude-sonnet-4-5', label: 'Claude Sonnet 4' },
+    { model: 'openai/gpt-4o', label: 'GPT-4o' },
+    { model: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  ]},
+  { name: 'xAI · Grok', baseUrl: 'https://api.x.ai/v1', apiType: 'openai', models: [
+    { model: 'grok-4', label: 'grok-4' },
+    { model: 'grok-4-fast', label: 'grok-4-fast' },
+  ]},
+  { name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', apiType: 'openai', models: [
+    { model: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
+    { model: 'qwen-2.5-32b', label: 'Qwen 2.5 32B' },
+    { model: 'deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 70B' },
+  ]},
+  { name: 'Mistral AI', baseUrl: 'https://api.mistral.ai/v1', apiType: 'openai', models: [
+    { model: 'mistral-large-latest', label: 'Mistral Large' },
+    { model: 'mistral-small-latest', label: 'Mistral Small' },
+  ]},
+  { name: 'Google AI · Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', apiType: 'openai', models: [
+    { model: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { model: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  ]},
+  { name: 'Ollama 本地', baseUrl: 'http://localhost:11434/v1', apiType: 'openai', models: [
+    { model: 'qwen2.5:7b', label: 'Qwen 2.5 7B' },
+    { model: 'llama3.1:8b', label: 'Llama 3.1 8B' },
+  ]},
 ];
 
 const defaultState = {
@@ -298,6 +356,36 @@ function toggleAppearance() {
   } else {
     appearanceWin.show();
     appearanceWin.focus();
+  }
+}
+
+function createProviderWindow() {
+  providerWin = new BrowserWindow({
+    width: 520,
+    height: 660,
+    frame: true,
+    resizable: true,
+    minWidth: 480,
+    minHeight: 500,
+    show: false,
+    title: '提供商管理',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  providerWin.loadFile(path.join(__dirname, 'src', 'renderer', 'provider.html'));
+  providerWin.on('closed', () => (providerWin = null));
+}
+
+function toggleProvider() {
+  if (!providerWin) createProviderWindow();
+  if (providerWin.isVisible()) {
+    providerWin.hide();
+  } else {
+    providerWin.show();
+    providerWin.focus();
   }
 }
 
@@ -555,6 +643,10 @@ ipcMain.handle('appearance:save', (e, data) => {
 ipcMain.on('appearance:open', () => toggleAppearance());
 ipcMain.on('appearance:close', () => {
   if (appearanceWin) appearanceWin.hide();
+});
+ipcMain.on('providers:open', () => toggleProvider());
+ipcMain.on('providers:close', () => {
+  if (providerWin) providerWin.hide();
 });
 ipcMain.on('settings:open', () => toggleSettings());
 ipcMain.on('settings:close', () => {

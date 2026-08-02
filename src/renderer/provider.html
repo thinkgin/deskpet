@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+  <title>提供商管理</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei",sans-serif; }
+    body { background:#fffaf3; color:#4a3b35; padding:20px 22px; max-width:680px; margin:0 auto; }
+    h1 { font-size:17px; margin-bottom:6px; }
+    .hint { font-size:11px; color:#a08a72; line-height:1.5; margin-bottom:16px; }
+    h2 { font-size:15px; margin:20px 0 12px; padding-top:14px; border-top:1px solid #eadfd3; }
+    .card {
+      border:1.5px solid #e2d3c4; border-radius:10px; padding:10px 12px; margin-bottom:8px;
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      flex-wrap:wrap;
+    }
+    .card.saved { background:#f9f4eb; }
+    .card .info { flex:1; min-width:180px; }
+    .card .info b { display:block; font-size:13px; }
+    .card .info span { font-size:11px; color:#a08a72; }
+    .card .actions { display:flex; gap:4px; flex-wrap:wrap; }
+    .btn {
+      padding:6px 11px; border:1.5px solid #4a3b35; border-radius:8px;
+      background:#fff; color:#4a3b35; font-size:12px; cursor:pointer; white-space:nowrap;
+    }
+    .btn.primary { background:#4a3b35; color:#fff; }
+    .btn.danger { border-color:#c0392b; color:#c0392b; }
+    input, select, textarea {
+      width:100%; padding:8px 10px; border:1.5px solid #d9c9b8;
+      border-radius:8px; font-size:13px; outline:none; background:#fff;
+    }
+    textarea { resize:vertical; min-height:80px; }
+    .field { margin-bottom:14px; }
+    .field label { display:block; font-size:13px; font-weight:600; margin-bottom:5px; }
+    .inline { display:flex; gap:8px; align-items:center; }
+    #status { text-align:center; font-size:12px; color:#2f9e44; margin-top:8px; min-height:16px; }
+    details { margin-bottom:10px; }
+    details summary { font-size:12px; color:#a08a72; cursor:pointer; padding:4px 0; }
+    details .field { margin-top:8px; }
+  </style>
+</head>
+<body>
+  <h1>提供商管理</h1>
+  <div class="hint">管理你的 API 中转提供商（Provider）。添加后，在设置页选择当前使用哪一个。</div>
+
+  <h2>热门提供商 · 一键添加</h2>
+  <div id="presetList"></div>
+
+  <h2>已添加的提供商</h2>
+  <div id="savedList"></div>
+  <div class="field" style="margin-top:10px">
+    <details id="customAddBlock">
+      <summary>＋ 自定义新增一个 Provider</summary>
+      <div class="field"><label>名称</label><input type="text" id="customName" placeholder="我的中转站" /></div>
+      <div class="field"><label>接口地址 (baseURL)</label><input type="text" id="customUrl" placeholder="https://api.openai.com/v1" /></div>
+      <div class="field"><label>API Key</label><input type="password" id="customKey" placeholder="sk-..." /></div>
+      <div class="field"><label>模型列表（每行一个，如 gpt-4o-mini）</label><textarea id="customModels" placeholder="gpt-4o-mini&#10;gpt-4o"></textarea></div>
+      <button id="customAdd" class="btn primary" style="width:100%">添加此 Provider</button>
+    </details>
+  </div>
+
+  <div id="status"></div>
+
+  <script src="provider.js"></script>
+</body>
+</html>

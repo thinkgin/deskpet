@@ -79,7 +79,7 @@ html, body {
   transition: opacity 0.25s ease;
 }
 
-#stage:hover #levelBadge {
+#levelBadge.visible {
   opacity: 1;
 }
 

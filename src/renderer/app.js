@@ -539,6 +539,12 @@ window.api.onSettingsChanged(() => {
   window.location.reload();
 });
 
+(function bindHover() {
+  const badge = document.getElementById('levelBadge');
+  stage.addEventListener('mouseenter', () => badge && badge.classList.add('visible'));
+  stage.addEventListener('mouseleave', () => badge && badge.classList.remove('visible'));
+})();
+
 (async () => {
   await loadAll();
   runGreeting();

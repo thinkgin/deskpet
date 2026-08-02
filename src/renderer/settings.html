@@ -149,50 +149,38 @@
   </div>
 
   <h2>AI 对话（Provider · 模型 · 推理等级）</h2>
-  <div class="hint" style="margin-bottom:10px">可添加多套 OpenAI 兼容 Provider（含热门预设模板），每个 Provider 可配置多个模型与推理等级，最后在下方为对话选择其一。</div>
-
-  <div class="field">
-    <label>从预设快速添加</label>
-    <div class="inline">
-      <select id="presetSel" style="flex:1.4"></select>
-      <button id="presetAdd" class="mini-btn primary">添加该预设</button>
-    </div>
-    <div class="hint">预设只填入接口地址与模型列表，API Key 需你在编辑里填写。</div>
-  </div>
-
-  <div class="field">
-    <label>已保存的 Provider</label>
-    <div id="provList"></div>
-    <button id="provAdd" class="mini-btn" style="width:100%;margin-top:4px">＋ 自定义新增一个 Provider</button>
-  </div>
 
   <div class="field">
     <label>用来对话的 Provider</label>
     <select id="activeProviderId"></select>
-    <div class="hint">选择「自定义单配置」则使用下方 legacy 字段；选择某个已保存 Provider 则使用它的地址/Key/模型。</div>
+    <div class="hint">
+      选择「自定义单配置」使用下方 Legacy 字段；或选一个已添加的 Provider。
+      <a href="#" id="openProvider">管理提供商 …</a>
+    </div>
   </div>
 
   <div class="field" id="activeModelBox">
-    <label>当前模型</label>
+    <label>模型</label>
     <select id="activeModel"></select>
-    <div class="hint">从所选 Provider 的模型列表里选择。</div>
   </div>
 
   <div class="field">
     <label>推理等级</label>
     <select id="activeEffort">
-      <option value="none">关闭（学生级/快速）</option>
+      <option value="none">关闭</option>
+      <option value="minimal">极低</option>
       <option value="low">低</option>
       <option value="medium" selected>中（默认）</option>
-      <option value="high">高（深度思考）</option>
+      <option value="high">高</option>
+      <option value="xhigh">极高</option>
     </select>
-    <div class="hint">对应 opencode 的 reasoningEffort，向模型额外携带 reasoning_effort 参数。仅「自定义/官方」Provider 生效。</div>
+    <div class="hint">对应 reasoningEffort（仅 AI Provider 支持时生效）。</div>
   </div>
 
   <div class="field">
     <label>自定义单配置 · API Key</label>
     <input type="password" id="aiApiKey" placeholder="sk-..." autocomplete="off" />
-    <div class="hint">OpenAI 兼容接口的 Key，留空则用内置可爱回复。</div>
+    <div class="hint">勾选 Provider 时才用上方配置；此处是 fallback。留空用内置可爱回复。</div>
   </div>
   <div class="field">
     <label>自定义单配置 · 接口地址</label>

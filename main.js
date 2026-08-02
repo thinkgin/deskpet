@@ -425,7 +425,7 @@ function placeBubble(width, height) {
   const pb = petWin.getBounds();
   const display = screen.getDisplayNearestPoint({ x: pb.x + Math.floor(pb.width / 2), y: pb.y + Math.floor(pb.height / 2) });
   const wa = display.workArea;
-  const gap = 12;
+  const gap = 6;
   const margin = 6;
   let x;
   let y;
@@ -463,7 +463,7 @@ function toggleChat() {
     // 让聊天窗口出现在宠物旁边且留出间距，绝不盖住宠物头部
     const wa = screen.getPrimaryDisplay().workArea;
     const cw = chatWin.getBounds();
-    const gap = 16;
+    const gap = 6;
     let x = wa.x + wa.width - cw.width - 20;
     let y = wa.y + wa.height - cw.height - 60;
     if (petWin) {

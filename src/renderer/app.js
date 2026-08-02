@@ -386,6 +386,10 @@ function positionBubble() {
   const pad = 14;
   const sr = stage.getBoundingClientRect();
   const cr = canvas.getBoundingClientRect();
+  // 气泡高度限制在宠物头顶以上的可用空间内，超出则内部滚动，绝不盖住宠物头部
+  const avail = Math.max(34, cr.top - sr.top - pad);
+  bubble.style.maxHeight = avail + 'px';
+  bubble.style.overflowY = 'auto';
   const bh = bubble.offsetHeight || 34;
   let left = cr.left - sr.left + cr.width / 2;
   let top = cr.top - sr.top - bh - pad;

@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+*.asar
+
+# logs & temp
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+
+# env / secrets
+.env
+.env.*
+*.local
+
+# user data (never commit app runtime data)
+settings.json
+state.json

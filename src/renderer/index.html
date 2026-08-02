@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:; script-src 'self';" />
+  <title>桌面宠物</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="stage">
+    <div id="bubble">
+      <div id="bubble-text"></div>
+    </div>
+    <div id="actions">
+      <button class="act" data-act="feed" title="喂食">🍰</button>
+      <button class="act" data-act="play" title="玩耍">🎾</button>
+      <button class="act" data-act="bath" title="洗澡">🛁</button>
+      <button class="act" data-act="appearance" title="形象面板">🎨</button>
+      <button class="act" data-act="chat" title="聊天">💬</button>
+      <button class="act" data-act="settings" title="设置">⚙️</button>
+    </div>
+    <canvas id="pet"></canvas>
+  </div>
+  <script src="pets/cat.js"></script>
+  <script src="pet-engine.js"></script>
+  <script src="pixel-compose.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

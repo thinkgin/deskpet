@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self';" />
+  <title>形象面板</title>
+  <link rel="stylesheet" href="appearance.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>形象面板</h1>
+      <div class="sub">系统小猫固定保留，另有 6 个自定义形象槽位，可自由拼装与涂画</div>
+    </header>
+
+    <section id="slots">
+      <div class="slot system" data-idx="-1">
+        <div class="slot-preview" id="slot-preview-0"></div>
+        <div class="slot-name">系统小猫</div>
+      </div>
+      <div class="slot" data-idx="0">
+        <div class="slot-preview" id="slot-preview-1"></div>
+        <div class="slot-name" id="slot-name-1">空槽位</div>
+      </div>
+      <div class="slot" data-idx="1">
+        <div class="slot-preview" id="slot-preview-2"></div>
+        <div class="slot-name" id="slot-name-2">空槽位</div>
+      </div>
+      <div class="slot" data-idx="2">
+        <div class="slot-preview" id="slot-preview-3"></div>
+        <div class="slot-name" id="slot-name-3">空槽位</div>
+      </div>
+      <div class="slot" data-idx="3">
+        <div class="slot-preview" id="slot-preview-4"></div>
+        <div class="slot-name" id="slot-name-4">空槽位</div>
+      </div>
+      <div class="slot" data-idx="4">
+        <div class="slot-preview" id="slot-preview-5"></div>
+        <div class="slot-name" id="slot-name-5">空槽位</div>
+      </div>
+      <div class="slot" data-idx="5">
+        <div class="slot-preview" id="slot-preview-6"></div>
+        <div class="slot-name" id="slot-name-6">空槽位</div>
+      </div>
+    </section>
+
+    <main>
+      <div id="editor">
+        <div class="panel" id="template-panel">
+          <h2>① 模板拼装</h2>
+          <div class="field">
+            <label>配色</label>
+            <div class="opts" id="opt-scheme"></div>
+          </div>
+          <div class="field">
+            <label>耳朵</label>
+            <div class="opts" id="opt-ear"></div>
+          </div>
+          <div class="field">
+            <label>眼睛</label>
+            <div class="opts" id="opt-eye"></div>
+          </div>
+          <div class="field">
+            <label>嘴巴</label>
+            <div class="opts" id="opt-mouth"></div>
+          </div>
+          <div class="field">
+            <label>腮红</label>
+            <div class="opts" id="opt-cheeks">
+              <button class="opt active" data-val="true">有</button>
+              <button class="opt" data-val="false">无</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="canvas-panel">
+          <h2>② 像素微调</h2>
+          <canvas id="pixcanvas" width="384" height="384"></canvas>
+          <div class="tools">
+            <div class="swatches" id="swatches"></div>
+            <button id="eraser" class="tool-btn active">橡皮</button>
+            <button id="clearBtn" class="tool-btn danger">清空</button>
+          </div>
+          <div class="hint">左键涂色，右键擦除，点击下方色块选色</div>
+        </div>
+
+        <div class="panel" id="preview-panel">
+          <h2>预览</h2>
+          <canvas id="preview" width="176" height="176"></canvas>
+          <div class="field">
+            <label>名字</label>
+            <input type="text" id="petName" maxlength="8" placeholder="给宠物起个名字" />
+          </div>
+          <div class="actions">
+            <button id="saveBtn" class="btn primary">保存</button>
+            <button id="useBtn" class="btn">设为当前</button>
+            <button id="deleteBtn" class="btn danger" style="display:none">删除</button>
+          </div>
+          <div id="status"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="pets/cat.js"></script>
+  <script src="pet-engine.js"></script>
+  <script src="pixel-compose.js"></script>
+  <script src="appearance.js"></script>
+</body>
+</html>

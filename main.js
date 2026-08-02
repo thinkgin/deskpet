@@ -427,20 +427,29 @@ function placeBubble(width, height) {
   const wa = display.workArea;
   const gap = 6;
   const margin = 6;
-  let x;
-  let y;
-  // 上方优先；空间不足则下方。左右根据宠物靠近哪边对齐，气泡向屏幕内部延伸。
-  if (pb.y - wa.y >= height + gap) y = pb.y - height - gap;
-  else if (wa.y + wa.height - (pb.y + pb.height) >= height + gap) y = pb.y + pb.height + gap;
-  else {
-    y = Math.min(Math.max(pb.y + Math.round((pb.height - height) / 2), wa.y + margin), wa.y + wa.height - height - margin);
+  // 宠物窗口上下有透明留白，定位必须以实际像素宠物为锚点，否则气泡会离宠物很远。
+  const visual = {
+    x: pb.x + 20,
+    y: pb.y + Math.max(18, pb.height - 16 * (petWinSize ? petWinSize.scale : 5) - 20),
+    width: Math.max(16, pb.width - 40),
+    height: Math.max(16, 16 * (petWinSize ? petWinSize.scale : 5)),
+  };
+  const candidates = [
+    { side: 'top', x: visual.x + Math.round((visual.width - width) / 2), y: visual.y - height - gap },
+    { side: 'bottom', x: visual.x + Math.round((visual.width - width) / 2), y: visual.y + visual.height + gap },
+    { side: 'left', x: visual.x - width - gap, y: visual.y + Math.round((visual.height - height) / 2) },
+    { side: 'right', x: visual.x + visual.width + gap, y: visual.y + Math.round((visual.height - height) / 2) },
+  ];
+  const fits = (c) => c.x >= wa.x + margin && c.y >= wa.y + margin && c.x + width <= wa.x + wa.width - margin && c.y + height <= wa.y + wa.height - margin;
+  // 顶部仍是首选，但只有完整放得下才使用，绝不把气泡钳到屏幕边缘造成远距离。
+  let chosen = candidates.find(fits);
+  if (!chosen) {
+    chosen = candidates
+      .map((c) => ({ ...c, distance: Math.abs(c.x - visual.x) + Math.abs(c.y - visual.y) }))
+      .sort((a, b) => a.distance - b.distance)[0];
   }
-  const petCenter = pb.x + pb.width / 2;
-  const screenCenter = wa.x + wa.width / 2;
-  if (petCenter < screenCenter) x = pb.x;
-  else x = pb.x + pb.width - width;
-  x = Math.min(Math.max(Math.round(x), wa.x + margin), wa.x + wa.width - width - margin);
-  y = Math.min(Math.max(Math.round(y), wa.y + margin), wa.y + wa.height - height - margin);
+  const x = Math.min(Math.max(Math.round(chosen.x), wa.x + margin), wa.x + wa.width - width - margin);
+  const y = Math.min(Math.max(Math.round(chosen.y), wa.y + margin), wa.y + wa.height - height - margin);
   bubbleWin.setBounds({ x, y, width, height });
   bubbleWin.showInactive();
 }

@@ -22,6 +22,7 @@
       background: #4a3b35; color: #fff;
       border-radius: 14px 14px 0 0;
       cursor: move;
+      -webkit-app-region: drag;
     }
     #bar .dot { width: 12px; height: 12px; border-radius: 50%; }
     #bar .dot.r { background: #ff5f57; }
@@ -30,8 +31,11 @@
     #bar .title { flex: 1; text-align: center; font-size: 13px; }
     #bar .close {
       background: #ff5f57; color: #fff; border: none; border-radius: 8px;
-      width: 26px; height: 26px; font-size: 14px; cursor: pointer; line-height: 1;
+      width: 32px; height: 32px; font-size: 14px; cursor: pointer; line-height: 1;
+      display:flex; align-items:center; justify-content:center;
+      -webkit-app-region: no-drag;
     }
+    #bar .close svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
     #msgs {
       flex: 1; overflow-y: auto; padding: 12px;
       display: flex; flex-direction: column; gap: 10px;
@@ -62,8 +66,12 @@
       <div class="dot y"></div>
       <div class="dot g"></div>
       <div class="title">和宠物聊天</div>
-      <button id="clearMem" class="close" style="background:#b0876a;margin-right:4px" title="清空记忆">记忆</button>
-      <button class="close" id="close">✕</button>
+      <button id="clearMem" class="close" style="background:#b0876a;margin-right:4px" title="清空记忆" aria-label="清空记忆">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v6M14 10v6"/></svg>
+      </button>
+      <button class="close" id="close" title="关闭聊天" aria-label="关闭聊天">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </div>
     <div id="msgs"></div>
     <div id="input-row">

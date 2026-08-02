@@ -29,26 +29,6 @@ function addMsg(role, text, save) {
   if (save) persistHistory();
 }
 
-function dragSetup() {
-  let dragging = false, start = null;
-  const bar = document.getElementById('bar');
-  bar.addEventListener('pointerdown', async (e) => {
-    if (e.button !== 0) return;
-    dragging = true;
-    bar.setPointerCapture(e.pointerId);
-    const b = (await window.api.getChatBounds()) || { x: 0, y: 0 };
-    start = { sx: e.screenX, sy: e.screenY, wx: b.x, wy: b.y };
-  });
-  window.addEventListener('pointermove', (e) => {
-    if (!dragging || !start) return;
-    window.api.moveChatTo(start.wx + (e.screenX - start.sx), start.wy + (e.screenY - start.sy));
-  });
-  window.addEventListener('pointerup', () => {
-    dragging = false;
-    start = null;
-  });
-}
-
 async function send() {
   const text = input.value.trim();
   if (!text) return;
@@ -117,5 +97,4 @@ window.api.onChatOpen(() => {
     const { greeting, festival } = await window.api.getGreeting();
     addMsg('pet', festival || greeting || '喵~主人你来啦！我一直在等你哦~');
   }
-  dragSetup();
 })();

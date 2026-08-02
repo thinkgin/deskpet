@@ -833,10 +833,12 @@ ipcMain.on('pet:dragEnd', () => endPetDrag());
 ipcMain.on('chat:moveTo', (e, { x, y }) => {
   if (!chatWin) return;
   const b = chatWin.getBounds();
-  const display = screen.getDisplayNearestPoint({ x, y });
+  const targetX = Math.round(Number(x) || 0);
+  const targetY = Math.round(Number(y) || 0);
+  const display = screen.getDisplayNearestPoint({ x: targetX, y: targetY });
   const wa = display.workArea;
-  const nx = Math.min(Math.max(x, wa.x), wa.x + wa.width - b.width);
-  const ny = Math.min(Math.max(y, wa.y), wa.y + wa.height - b.height);
+  const nx = Math.round(Math.min(Math.max(targetX, wa.x), wa.x + wa.width - b.width));
+  const ny = Math.round(Math.min(Math.max(targetY, wa.y), wa.y + wa.height - b.height));
   chatWin.setPosition(nx, ny);
 });
 ipcMain.handle('chat:getBounds', () => (chatWin ? chatWin.getBounds() : null));

@@ -829,6 +829,23 @@ function endPetDrag() {
 
 ipcMain.on('pet:dragStart', () => startPetDrag());
 ipcMain.on('pet:dragEnd', () => endPetDrag());
+// ============= 宠物轻触 AI 回复（失败回空串，交给渲染层兜底） =============
+ipcMain.handle('pet:tapAI', async () => {
+  const s = getSettings();
+  const { active, model, legacy } = resolveProvider(s);
+  const hasKey = legacy ? (s.aiApiKey && s.aiBaseUrl && s.aiModel) : !!(active && active.baseUrl && active.apiKey);
+  if (!hasKey || !model) return '';
+  try {
+    const msgs = [{ role: 'user', content: '戳一戳' }];
+    const reply = await chatAI(msgs);
+    // 如果 chatAI 实际走了 localChat（API 未成功），则用预设兜底
+    if (reply === localChat(msgs)) return '';
+    return reply && reply.length < 200 ? reply : '';
+  } catch {
+    return '';
+  }
+});
+
 // 移动聊天窗口自身（拖拽标题栏用）
 ipcMain.on('chat:moveTo', (e, { x, y }) => {
   if (!chatWin) return;

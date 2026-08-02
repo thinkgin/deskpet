@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('api', {
   clearMemory: () => ipcRenderer.invoke('memory:clear'),
   getGrowth: () => ipcRenderer.invoke('growth:get'),
   addExp: (amount) => ipcRenderer.invoke('growth:addExp', amount),
+  tapAI: () => ipcRenderer.invoke('pet:tapAI'),
   movePet: (dx, dy) => ipcRenderer.invoke('pet:move', { dx, dy }),
   movePetTo: (x, y) => ipcRenderer.send('pet:moveTo', { x, y }),
   startPetDrag: () => ipcRenderer.send('pet:dragStart'),

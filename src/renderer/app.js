@@ -148,9 +148,18 @@ const cuteDialogues = [
   '喵~你的手好暖，好想跟你待一起~',
 ];
 
-function tapPet() {
+async function tapPet() {
   engine.play('blink');
   playS('meow');
+  // 优先走 AI 模型回答
+  try {
+    const reply = await window.api.tapAI();
+    if (reply) {
+      say(reply, 3200);
+      setTimeout(() => engine.play('idle'), 900);
+      return;
+    }
+  } catch { /* 网络/模型异常，兜底预设 */ }
   say(cuteDialogues[Math.floor(Math.random() * cuteDialogues.length)]);
   setTimeout(() => engine.play('idle'), 900);
 }

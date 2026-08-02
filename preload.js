@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   showPetBubble: (payload) => ipcRenderer.send('pet:bubbleShow', payload),
   hidePetBubble: () => ipcRenderer.send('pet:bubbleHide'),
   reportBubbleSize: (width, height) => ipcRenderer.send('pet:bubbleSize', { width, height }),
+  bubbleReady: () => ipcRenderer.send('pet:bubbleReady'),
   setClickThrough: (flag) => ipcRenderer.send('pet:setClickThrough', flag),
   notify: (title, body) => ipcRenderer.send('notify', { title, body }),
   toggleChat: () => ipcRenderer.send('chat:toggle'),

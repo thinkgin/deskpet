@@ -965,6 +965,10 @@ ipcMain.on('pet:bubbleSize', (e, size) => {
   placeBubble(width, height);
 });
 
+ipcMain.on('pet:bubbleReady', () => {
+  if (bubbleWin && pendingBubblePayload) bubbleWin.webContents.send('pet:bubbleContent', pendingBubblePayload);
+});
+
 ipcMain.on('pet:bubbleHide', () => {
   if (bubbleWin) bubbleWin.hide();
 });

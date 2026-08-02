@@ -454,7 +454,6 @@ function createTray() {
       { label: '洗澡', click: () => sendTray('bath') },
       { type: 'separator' },
       { label: '设置', click: () => sendTray('settings') },
-      { label: '提供商管理', click: () => toggleProvider() },
       { type: 'separator' },
       { label: '退出', click: () => { isQuitting = true; app.quit(); } },
     ])

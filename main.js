@@ -240,9 +240,11 @@ function getPetWindowSize() {
 
 // 期望的宠物窗口尺寸（缓存，DPI 膨胀下窗口实际尺寸会漂移，但边界钳制一律用此固定值）
 let petWinSize = null;
+let petBaseWinSize = null;
 function refreshPetWinSize() {
-  petWinSize = getPetWindowSize();
-  return petWinSize;
+  petBaseWinSize = getPetWindowSize();
+  petWinSize = { ...petBaseWinSize };
+  return petBaseWinSize;
 }
 
 function createPetWindow() {
@@ -848,7 +850,30 @@ ipcMain.on('pet:getBoundsSync', (e) => {
 ipcMain.on('pet:setWindowSize', (e, { width, height }) => {
   if (!petWin) return;
   const b = petWin.getBounds();
-  petWin.setBounds({ x: b.x, y: b.y, width, height });
+  const nextX = Math.round(b.x + (b.width - width) / 2);
+  const nextY = b.y + b.height - height;
+  petWin.setBounds({ x: nextX, y: nextY, width, height });
+  petBaseWinSize = { width, height, scale: petBaseWinSize ? petBaseWinSize.scale : getPetWindowSize().scale };
+  petWinSize = { ...petBaseWinSize };
+  reclampPetWindow();
+});
+
+// 气泡显示时扩展透明窗口顶部空间。以窗口底部中心为锚点，宠物在屏幕上不会跳动。
+ipcMain.on('pet:setBubbleLayout', (e, layout) => {
+  if (!petWin) return;
+  const baseWidth = Math.max(120, Math.round(Number(layout && layout.baseWidth) || 120));
+  const baseHeight = Math.max(110, Math.round(Number(layout && layout.baseHeight) || 110));
+  const bubbleWidth = Math.max(0, Math.round(Number(layout && layout.bubbleWidth) || 0));
+  const bubbleHeight = Math.max(0, Math.round(Number(layout && layout.bubbleHeight) || 0));
+  const gap = Math.max(0, Math.round(Number(layout && layout.gap) || 0));
+  const visible = !!(layout && layout.visible);
+  const width = visible ? Math.max(baseWidth, bubbleWidth + 12) : baseWidth;
+  const height = visible ? baseHeight + bubbleHeight + gap : baseHeight;
+  const b = petWin.getBounds();
+  const nextX = Math.round(b.x + (b.width - width) / 2);
+  const nextY = b.y + b.height - height;
+  petWin.setBounds({ x: nextX, y: nextY, width, height });
+  petWinSize = { width, height, scale: petWinSize ? petWinSize.scale : getPetWindowSize().scale };
   reclampPetWindow();
 });
 

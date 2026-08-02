@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('api', {
   getPetBoundsSync: () => ipcRenderer.sendSync('pet:getBoundsSync'),
   getChatBounds: () => ipcRenderer.invoke('chat:getBounds'),
   setWindowSize: (width, height) => ipcRenderer.send('pet:setWindowSize', { width, height }),
+  setBubbleLayout: (layout) => ipcRenderer.send('pet:setBubbleLayout', layout),
   setClickThrough: (flag) => ipcRenderer.send('pet:setClickThrough', flag),
   notify: (title, body) => ipcRenderer.send('notify', { title, body }),
   toggleChat: () => ipcRenderer.send('chat:toggle'),

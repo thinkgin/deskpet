@@ -26,6 +26,8 @@ let dragMoved = false;
 let hovered = false;
 let actionOpen = false;
 let bubbleTimer = null;
+let bubbleVisible = false;
+let baseWindowSize = { width: 120, height: 110 };
 let stateTick = 0;
 let lastHint = 0;
 
@@ -89,9 +91,33 @@ function playTone(freq, dur, type, vol, delay = 0) {
 
 function say(text, ms = 2600) {
   bubbleText.textContent = text;
-  bubble.classList.add('show');
   clearTimeout(bubbleTimer);
-  bubbleTimer = setTimeout(() => bubble.classList.remove('show'), ms);
+  requestAnimationFrame(() => {
+    showBubbleLayout();
+    bubble.classList.add('show');
+  });
+  bubbleTimer = setTimeout(hideBubble, ms);
+}
+
+function showBubbleLayout() {
+  bubbleVisible = true;
+  bubble.style.maxHeight = 'none';
+  bubble.style.overflow = 'visible';
+  const rect = bubble.getBoundingClientRect();
+  window.api.setBubbleLayout({
+    visible: true,
+    baseWidth: baseWindowSize.width,
+    baseHeight: baseWindowSize.height,
+    bubbleWidth: Math.ceil(rect.width),
+    bubbleHeight: Math.ceil(rect.height),
+    gap: 14,
+  });
+}
+
+function hideBubble() {
+  bubbleVisible = false;
+  bubble.classList.remove('show');
+  window.api.setBubbleLayout({ visible: false, baseWidth: baseWindowSize.width, baseHeight: baseWindowSize.height });
 }
 
 function hideActions() {
@@ -105,7 +131,7 @@ function showActions() {
   actionsBox.classList.add('show');
   window.api.setClickThrough(false);
   // 菜单在顶部，隐藏气泡避免两者重叠
-  bubble.classList.remove('show');
+  hideBubble();
   clearTimeout(bubbleTimer);
 }
 
@@ -176,7 +202,9 @@ function resizeWindow() {
   const k = petsScale();
   const w = Math.max(Math.round(s.w * k) + 40, 120);
   const h = Math.max(Math.round(s.h * k) + 60, 110);
-  window.api.setWindowSize(w, h);
+  baseWindowSize = { width: w, height: h };
+  if (bubbleVisible) showBubbleLayout();
+  else window.api.setWindowSize(w, h);
 }
 
 function applyDecay(since) {
@@ -386,14 +414,14 @@ function positionBubble() {
   const pad = 14;
   const sr = stage.getBoundingClientRect();
   const cr = canvas.getBoundingClientRect();
-  // 气泡高度限制在宠物头顶以上的可用空间内，超出则内部滚动，绝不盖住宠物头部
-  const avail = Math.max(34, cr.top - sr.top - pad);
-  bubble.style.maxHeight = avail + 'px';
-  bubble.style.overflowY = 'auto';
   const bh = bubble.offsetHeight || 34;
   let left = cr.left - sr.left + cr.width / 2;
   let top = cr.top - sr.top - bh - pad;
-  if (top < 6) top = 6;
+  // 主进程调整透明窗口后立即重定位，保证气泡底边始终与宠物头顶相隔 pad。
+  if (bubbleVisible && top < 0) {
+    requestAnimationFrame(positionBubble);
+    return;
+  }
   bubble.style.left = left + 'px';
   bubble.style.top = top + 'px';
 }

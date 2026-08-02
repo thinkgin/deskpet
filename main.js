@@ -36,21 +36,35 @@ function saveJSON(file, data) {
 const defaultSettings = {
   petId: 'cat',
   petName: '咪咪',
+  masterAddress: '主人',
+  petGender: '女生',
+  petBirthday: '', // YYYY-MM-DD，空则不显示岁数
   soundOn: true,
   autoWalk: true,
   petScale: 5,
   aiApiKey: '',
   aiBaseUrl: 'https://api.openai.com/v1',
   aiModel: 'gpt-3.5-turbo',
-  systemPrompt: '你是一只住在电脑桌面上、名叫{name}的小猫宠物，性格粘人可爱，喜欢陪主人聊天。用简短、温暖、口语化的中文回复，经常关心主人。',
-  // 自定义形象：最多 6 个槽位（index 0~5），每个为 null 或自定义形象数据
+  systemPrompt: '你是一只住在电脑桌上、名叫{name}的小猫，性格温柔陪伴可爱，喜欢陪{address}聊天。用简短、温暖、口语化的中文回复，经常关心{address}。',
+  // 自定义 AI 形象：最多 6 个槽位（index 0~5），每个为 null 或自定义形象数据
   customPets: [null, null, null, null, null, null],
   // AI 对话 Provider 配置（多套可保存的预设；activeProviderId='custom' 或 '' 时回落用 aiBaseUrl/aiApiKey/aiModel）
   providers: [],
   activeProviderId: '',
+  activeModel: '',
+  activeReasoningEffort: 'medium',
   // 定时关机配置
   shutdownConfig: { mode: 'off', minutes: 60, time: '22:00', shutdownAt: 0 },
 };
+
+// opencode 风格的热门 Provider 模板（仅预设地址/模型，不含 user key）
+const OPENCODE_PRESETS = [
+  { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiType: 'openai', models: [{ model: 'gpt-4o-mini', label: 'GPT-4o-mini' }, { model: 'gpt-4o', label: 'GPT-4o' }] },
+  { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', apiType: 'openai', models: [{ model: 'deepseek-chat', label: 'DeepSeek-V3' }, { model: 'deepseek-reasoner', label: 'DeepSeek-R1' }] },
+  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', apiType: 'openai', models: [{ model: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' }, { model: 'openai/gpt-4o', label: 'GPT-4o' }] },
+  { name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', apiType: 'openai', models: [{ model: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' }, { model: 'qwen/qwen2.5-72b', label: 'Qwen 2.5 72B' }] },
+  { name: 'Ollama（本地）', baseUrl: 'http://localhost:11434/v1', apiType: 'openai', models: [{ model: 'qwen2.5:7b', label: 'Qwen 2.5 7B' }, { model: 'llama3.1:8b', label: 'Llama 3.1 8B' }] },
+];
 
 const defaultState = {
   stats: { hunger: 80, mood: 80, clean: 80, health: 90, affection: 0 },
@@ -60,7 +74,19 @@ const defaultState = {
   lastFeedAt: 0,
   lastPlayAt: 0,
   lastBathAt: 0,
+  // 成长系统：等级 + 经验
+  level: 1,
+  exp: 0,
 };
+
+function getGrowthDef(level, exp) {
+  const lv = Math.max(1, Number(level) || 1);
+  const e = Math.max(0, Number(exp) || 0);
+  const expToNext = Math.floor(100 * Math.pow(1.3, lv - 1));
+  // 体型系数：随等级变大，1 级为 1.0
+  const scale = Number((1 + (lv - 1) * 0.02).toFixed(3));
+  return { level: lv, exp: e, expToNext, scale };
+}
 
 function getSettings() {
   return { ...defaultSettings, ...loadJSON(settingsFile, {}) };
@@ -344,28 +370,41 @@ function createTray() {
   );
 }
 
+function resolveProvider(s) {
+  const active = (s.providers || []).find((p) => p && p.id === s.activeProviderId);
+  if (active) {
+    // 优先已选模型；否则用 provider 自定义模型；再否则该 provider 第一个模型
+    let model = s.activeModel;
+    if (!model) {
+      const m = Array.isArray(active.models) ? active.models.find((x) => x.model) : null;
+      model = (m && m.model) || active.model || '';
+    }
+    return { active, model, effort: s.activeReasoningEffort || 'medium', legacy: false };
+  }
+  return { active: null, model: s.aiModel, effort: 'medium', legacy: !!(s.aiApiKey && s.aiBaseUrl && s.aiModel) };
+}
+
 async function chatAI(messages) {
   const s = getSettings();
-  // 解析当前生效的对话 Provider：优先 activeProviderId，其次 legacy 字段
-  const active = (s.providers || []).find((p) => p && p.id === s.activeProviderId);
-  const useProviders = !!(active && active.baseUrl && active.apiKey && active.model);
-  const hasLegacy = !!(s.aiApiKey && s.aiBaseUrl && s.aiModel);
-  if (useProviders || hasLegacy) {
+  const { active, model, effort, legacy } = resolveProvider(s);
+  const canCall = legacy || (active && active.baseUrl);
+  if (canCall && model) {
     try {
-      const baseUrl = useProviders ? active.baseUrl.replace(/\/$/, '') : s.aiBaseUrl.replace(/\/$/, '');
-      const apiKey = useProviders ? active.apiKey : s.aiApiKey;
-      const model = useProviders ? active.model : s.aiModel;
+      const baseUrl = legacy ? s.aiBaseUrl : (active && active.baseUrl && active.baseUrl.replace(/\/$/, ''));
+      const apiKey = legacy ? s.aiApiKey : (active && active.apiKey);
+      const payload = {
+        model,
+        messages: [{ role: 'system', content: buildSystemPrompt(s) }, ...messages.slice(-20)],
+        temperature: 0.8,
+      };
+      if (effort && effort !== 'none') payload.reasoning_effort = effort;
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'system', content: s.systemPrompt.replace('{name}', s.petName) }, ...messages.slice(-20)],
-          temperature: 0.8,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.choices && data.choices[0]) return data.choices[0].message.content;
@@ -376,6 +415,11 @@ async function chatAI(messages) {
     }
   }
   return localChat(messages);
+}
+
+function buildSystemPrompt(s) {
+  let prompt = s.systemPrompt.replace('{name}', s.petName).replace('{address}', s.masterAddress || '主人');
+  return prompt;
 }
 
 function localChat(messages) {
@@ -391,13 +435,16 @@ function localChat(messages) {
 }
 
 function getGreeting() {
+  const s = getSettings();
+  const name = s.petName || '宠物';
+  const addr = s.masterAddress || '主人';
   const h = new Date().getHours();
-  if (h < 5) return '夜深了主人，我陪着你，早点睡哦~';
-  if (h < 9) return '早上好主人！新的一天也要元气满满喵~';
-  if (h < 12) return '上午好~主人吃早饭了吗？记得喝水喵！';
-  if (h < 14) return '中午好呀，主人记得吃午饭，休息一下~';
-  if (h < 18) return '下午好主人，要不要休息一下，看看窗外呀？';
-  return '晚上好~今天辛苦啦，有我陪着你哦！';
+  if (h < 5) return `夜深了${addr}，我陪着你，早点睡哦~`;
+  if (h < 9) return `早上好${addr}！新的一天也要元气满满喵~`;
+  if (h < 12) return `上午好~${addr}吃早饭了吗？记得喝水喵！`;
+  if (h < 14) return `中午好呀，${addr}记得吃午饭，休息一下~`;
+  if (h < 18) return `下午好${addr}，要不要休息一下，看看窗外呀？`;
+  return `晚上好~今天辛苦啦，有${name}陪着你哦！`;
 }
 
 function getFestival() {
@@ -515,6 +562,67 @@ ipcMain.on('settings:close', () => {
 });
 ipcMain.handle('chat:send', (e, messages) => chatAI(messages));
 ipcMain.handle('greeting:get', () => ({ greeting: getGreeting(), festival: getFestival() }));
+ipcMain.handle('providers:presets', () => OPENCODE_PRESETS.map((p, i) => ({ id: `template-${i}`, ...p, apiKey: '' })));
+
+// ---------- 聊天记忆（memory.json） ----------
+let memoryCache = null;
+function memoryFile() { return path.join(app.getPath('userData'), 'memory.json'); }
+function loadMemory() {
+  if (memoryCache) return memoryCache;
+  memoryCache = { history: [], summary: '' };
+  try {
+    const raw = fs.readFileSync(memoryFile(), 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.history)) memoryCache = parsed;
+  } catch (e) { /* 首次运行无文件 */ }
+  return memoryCache;
+}
+function persistMemory() {
+  try { fs.writeFileSync(memoryFile(), JSON.stringify(memoryCache, null, 2)); } catch (e) { console.error('memory save error', e); }
+}
+ipcMain.handle('memory:load', () => loadMemory());
+ipcMain.handle('memory:save', (e, data) => {
+  const mem = loadMemory();
+  const history = Array.isArray(data && data.history) ? data.history : mem.history;
+  memoryCache = {
+    history: history.slice(-120),
+    summary: (data && typeof data.summary === 'string') ? data.summary : (mem.summary || ''),
+    updatedAt: Date.now(),
+  };
+  persistMemory();
+  return memoryCache;
+});
+ipcMain.handle('memory:clear', () => {
+  memoryCache = { history: [], summary: '', updatedAt: Date.now() };
+  persistMemory();
+  return memoryCache;
+});
+
+// ---------- 成长系统 ----------
+ipcMain.handle('growth:get', () => {
+  const st = getState();
+  const def = getGrowthDef(st.level, st.exp);
+  return { ...def, isNewDay: st.todayGreeted !== new Date().toDateString() };
+});
+ipcMain.handle('growth:addExp', (e, amount) => {
+  const cur = getState();
+  let { level, exp } = getGrowthDef(cur.level, cur.exp);
+  exp += Math.max(1, Number(amount) || 0);
+  let leveledUp = false;
+  let def = getGrowthDef(level, exp);
+  while (exp >= def.expToNext) {
+    exp -= def.expToNext;
+    level += 1;
+    leveledUp = true;
+    def = getGrowthDef(level, exp);
+  }
+  const merged = { ...cur, level, exp };
+  saveStateQuiet(merged);
+  return { ...getGrowthDef(level, exp), leveledUp };
+});
+function saveStateQuiet(data) {
+  try { fs.writeFileSync(stateFile, JSON.stringify(data, null, 2)); } catch (e) { console.error(e); }
+}
 // 计算宠物窗口应停留的边界（DIP 坐标）。
 // 用固定期望尺寸 petWinSize：非 100% DPI 下透明窗口实际尺寸会被系统反复取整膨胀，
 // 若用 b.width 参与计算，边界会越收越紧形成"空气墙"。

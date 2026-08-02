@@ -63,6 +63,31 @@
   </div>
 
   <div class="field">
+    <label>怎么称呼你（主人称呼）</label>
+    <input type="text" id="masterAddress" maxlength="8" placeholder="主人" />
+    <div class="hint">宠物会这样称呼你，例如「主人 / 哥哥 / boss」。</div>
+  </div>
+
+  <div class="inline">
+    <div class="field" style="flex:1">
+      <label>性别</label>
+      <select id="petGender">
+        <option value="女生">女生</option>
+        <option value="男生">男生</option>
+        <option value="保密">保密</option>
+      </select>
+    </div>
+    <div class="field" style="flex:2">
+      <label>生日</label>
+      <input type="date" id="petBirthday" />
+    </div>
+  </div>
+  <div class="field">
+    <label>当前年龄</label>
+    <input type="text" id="petAgeText" placeholder="设置生日后自动计算" disabled style="background:#f5ede3" />
+  </div>
+
+  <div class="field">
     <label>宠物尺寸</label>
     <select id="petScale">
       <option value="3">迷你</option>
@@ -123,32 +148,58 @@
     <div class="hint">手动强制关机可用系统命令或托盘菜单退出。</div>
   </div>
 
-  <h2>AI 对话（中转/自定义 Provider）</h2>
-  <div class="hint" style="margin-bottom:10px">可添加多套 OpenAI 兼容的中转服务预设，并为对话选择其一。也可以直接用下方「自定义单配置」。</div>
+  <h2>AI 对话（Provider · 模型 · 推理等级）</h2>
+  <div class="hint" style="margin-bottom:10px">可添加多套 OpenAI 兼容 Provider（含热门预设模板），每个 Provider 可配置多个模型与推理等级，最后在下方为对话选择其一。</div>
+
+  <div class="field">
+    <label>从预设快速添加</label>
+    <div class="inline">
+      <select id="presetSel" style="flex:1.4"></select>
+      <button id="presetAdd" class="mini-btn primary">添加该预设</button>
+    </div>
+    <div class="hint">预设只填入接口地址与模型列表，API Key 需你在编辑里填写。</div>
+  </div>
 
   <div class="field">
     <label>已保存的 Provider</label>
     <div id="provList"></div>
-    <button id="provAdd" class="mini-btn" style="width:100%;margin-top:4px">＋ 新增一个 Provider</button>
+    <button id="provAdd" class="mini-btn" style="width:100%;margin-top:4px">＋ 自定义新增一个 Provider</button>
   </div>
 
   <div class="field">
     <label>用来对话的 Provider</label>
     <select id="activeProviderId"></select>
-    <div class="hint">选择「自定义单配置」则使用下面的 legacy 字段；选择某个已保存 Provider 则使用其 baseURL/Key/模型。</div>
+    <div class="hint">选择「自定义单配置」则使用下方 legacy 字段；选择某个已保存 Provider 则使用它的地址/Key/模型。</div>
+  </div>
+
+  <div class="field" id="activeModelBox">
+    <label>当前模型</label>
+    <select id="activeModel"></select>
+    <div class="hint">从所选 Provider 的模型列表里选择。</div>
   </div>
 
   <div class="field">
-    <label>API Key</label>
+    <label>推理等级</label>
+    <select id="activeEffort">
+      <option value="none">关闭（学生级/快速）</option>
+      <option value="low">低</option>
+      <option value="medium" selected>中（默认）</option>
+      <option value="high">高（深度思考）</option>
+    </select>
+    <div class="hint">对应 opencode 的 reasoningEffort，向模型额外携带 reasoning_effort 参数。仅「自定义/官方」Provider 生效。</div>
+  </div>
+
+  <div class="field">
+    <label>自定义单配置 · API Key</label>
     <input type="password" id="aiApiKey" placeholder="sk-..." autocomplete="off" />
     <div class="hint">OpenAI 兼容接口的 Key，留空则用内置可爱回复。</div>
   </div>
   <div class="field">
-    <label>接口地址</label>
+    <label>自定义单配置 · 接口地址</label>
     <input type="text" id="aiBaseUrl" placeholder="https://api.openai.com/v1" />
   </div>
   <div class="field">
-    <label>模型</label>
+    <label>自定义单配置 · 模型</label>
     <input type="text" id="aiModel" placeholder="gpt-3.5-turbo" />
   </div>
 

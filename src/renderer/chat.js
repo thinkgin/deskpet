@@ -8,7 +8,11 @@ let history = [];
 
 const petAvatars = { cat: '🐱' };
 
-function addMsg(role, text) {
+function persistHistory() {
+  window.api.saveMemory({ history });
+}
+
+function addMsg(role, text, save) {
   const div = document.createElement('div');
   div.className = 'msg ' + role;
   if (role === 'pet') {
@@ -22,6 +26,7 @@ function addMsg(role, text) {
   div.appendChild(span);
   msgsEl.appendChild(div);
   msgsEl.scrollTop = msgsEl.scrollHeight;
+  if (save) persistHistory();
 }
 
 function dragSetup() {
@@ -50,6 +55,7 @@ async function send() {
   input.value = '';
   addMsg('user', text);
   history.push({ role: 'user', content: text });
+  persistHistory();
   sendBtn.disabled = true;
   const thinking = document.createElement('div');
   thinking.className = 'msg pet';
@@ -58,6 +64,7 @@ async function send() {
   try {
     const reply = await window.api.chat(history);
     history.push({ role: 'assistant', content: reply });
+    persistHistory();
     thinking.remove();
     addMsg('pet', reply);
   } catch (e) {
@@ -73,7 +80,19 @@ input.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') send();
 });
 closeBtn.addEventListener('click', () => {
+  persistHistory();
   window.api.closeChat();
+});
+
+const clearMemBtn = document.getElementById('clearMem');
+clearMemBtn.addEventListener('click', async () => {
+  if (!confirm('清空宠物对本次对话的记忆？')) return;
+  try {
+    await window.api.clearMemory();
+    history = [];
+    msgsEl.innerHTML = '';
+    addMsg('pet', '好啦主人，我把之前的事忘掉啦，从今天重新开始~');
+  } catch (e) { /* ignore */ }
 });
 
 window.api.onChatOpen(() => {
@@ -82,7 +101,21 @@ window.api.onChatOpen(() => {
 
 (async () => {
   settings = await window.api.loadSettings();
-  const { greeting, festival } = await window.api.getGreeting();
-  addMsg('pet', festival || greeting || '喵~主人你来啦！我一直在等你哦~');
+  // 加载历史记忆
+  try {
+    const mem = await window.api.loadMemory();
+    const savedHistory = (mem && Array.isArray(mem.history)) ? mem.history : [];
+    const valid = savedHistory.filter((m) => m && m.role && typeof m.content === 'string');
+    if (valid.length) {
+      history = valid.slice(-40);
+      history.forEach((m) => addMsg(m.role, m.content));
+    } else {
+      const { greeting, festival } = await window.api.getGreeting();
+      addMsg('pet', festival || greeting || '喵~主人你来啦！我一直在等你哦~');
+    }
+  } catch (e) {
+    const { greeting, festival } = await window.api.getGreeting();
+    addMsg('pet', festival || greeting || '喵~主人你来啦！我一直在等你哦~');
+  }
   dragSetup();
 })();

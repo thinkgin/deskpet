@@ -166,14 +166,16 @@ async function loadAll() {
   }
   switchPet(currentPetId);
   applyDecay(state.lastSavedAt || Date.now());
+  await refreshGrowth();
   resizeWindow();
 }
 
 function resizeWindow() {
   const def = pets[currentPetId] || cat;
   const s = def.size || { w: 16, h: 16 };
-  const w = Math.max(s.w * petScale + 40, 120);
-  const h = Math.max(s.h * petScale + 60, 110);
+  const k = petsScale();
+  const w = Math.max(Math.round(s.w * k) + 40, 120);
+  const h = Math.max(Math.round(s.h * k) + 60, 110);
   window.api.setWindowSize(w, h);
 }
 
@@ -194,11 +196,7 @@ function healthFromOthers() {
 function switchPet(id) {
   currentPetId = id;
   const def = pets[id] || cat;
-  // 自定义形象可能使用不同名字，同步到当前宠物名
-  if (id !== 'cat' && def.name) {
-    // 宠物名在聊天/问候中使用 settings.petName，这里仅本地展示用
-  }
-  engine = new Engine(canvas, def, petScale);
+  engine = new Engine(canvas, def, petsScale());
   engine.play('idle');
 }
 
@@ -211,17 +209,74 @@ function persist() {
   });
 }
 
+let growth = { level: 1, exp: 0, expToNext: 0, scale: 1 };
+
+async function refreshGrowth() {
+  try {
+    const g = await window.api.getGrowth();
+    if (g) growth = { level: g.level || 1, exp: g.exp || 0, expToNext: g.expToNext || 0, scale: g.scale || 1 };
+    updateBadge();
+    applyGrowth();
+  } catch (e) { /* ignore */ }
+}
+
+function updateBadge() {
+  const el = document.getElementById('levelBadge');
+  if (el) {
+    const need = Math.max(growth.expToNext || 0, 1);
+    el.textContent = `Lv.${growth.level} · ${growth.exp}/${need}`;
+  }
+}
+
+async function gainExp(amount) {
+  try {
+    const r = await window.api.addExp(amount);
+    if (r) {
+      const leveled = r.leveledUp;
+      growth = { level: r.level, exp: r.exp, expToNext: r.expToNext, scale: r.scale };
+      updateBadge();
+      applyGrowth();
+      if (leveled) {
+        say('叮！我升到 ' + r.level + ' 级啦，变得更强壮了呢~', 4000);
+        window.api.notify('桌面宠物·成长', `${settings.petName || '宠物'}升到 ${r.level} 级啦！`);
+        playS('pop');
+      }
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function applyGrowth() {
+  // 体型系数：在基础尺寸上放大；更新引擎与窗口以反映体型变化
+  document.documentElement.style.setProperty('--growth-scale', String(growth.scale || 1));
+  if (engine && settings && currentPetId) {
+    try {
+      const def = pets[currentPetId] || cat;
+      engine = new Engine(canvas, def, petsScale());
+      engine.play('idle');
+      resizeWindow();
+    } catch (e) { /* ignore */ }
+  }
+}
+
+function petsScale() {
+  const base = petScale || 5;
+  return (growth.scale || 1) * base;
+}
+
 async function runGreeting() {
   const today = new Date().toDateString();
-  const need = state.todayGreeted !== today;
+  const isNewDay = state.todayGreeted !== today;
   const { greeting, festival } = await window.api.getGreeting();
-  if (festival && need) {
+  // 每次启动都自动打招呼；某天已打过则用更轻量的一句话
+  if (festival && isNewDay) {
     say(festival, 4000);
     window.api.notify('桌面宠物·陪伴', festival);
-  } else if (need) {
+  } else if (isNewDay) {
     say(greeting, 3200);
+  } else {
+    say(`${settings.petName || '宠物'}来啦~${settings.masterAddress || '主人'}有事就叫我喵！`, 3000);
   }
-  if (need) {
+  if (isNewDay) {
     state.todayGreeted = today;
     persist();
   }
@@ -238,6 +293,7 @@ function doAction(act) {
       affectionTotal += 2;
       engine.play('eat');
       playS('eat');
+      gainExp(6);
       say(stats.hunger > 90 ? '喵呜~吃撑啦，肚子圆滚滚的！' : '呜喵~好香！主人最好啦！');
       setTimeout(() => engine.play('idle'), 1600);
       break;
@@ -249,6 +305,7 @@ function doAction(act) {
       affectionTotal += 4;
       engine.play('happy');
       playS('play');
+      gainExp(10);
       say('喵喵！好开心！再陪我玩一会儿嘛~');
       setTimeout(() => engine.play('idle'), 1800);
       break;
@@ -260,6 +317,7 @@ function doAction(act) {
       affectionTotal += 2;
       engine.play('sad');
       playS('splash');
+      gainExp(4);
       say('呜……毛都湿了，但是香香的了！');
       setTimeout(() => engine.play('idle'), 1800);
       break;
@@ -270,6 +328,7 @@ function doAction(act) {
       affectionTotal += 1;
       engine.play('blink');
       playS('meow');
+      gainExp(2);
       say('喵！主人戳我啦~');
       setTimeout(() => engine.play('idle'), 900);
       break;

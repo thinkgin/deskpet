@@ -2,66 +2,93 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
-  <title>提供商管理</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>提供商</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei",sans-serif; }
-    body { background:#fffaf3; color:#4a3b35; padding:20px 22px; max-width:680px; margin:0 auto; }
-    h1 { font-size:17px; margin-bottom:6px; }
-    .hint { font-size:11px; color:#a08a72; line-height:1.5; margin-bottom:16px; }
-    h2 { font-size:15px; margin:20px 0 12px; padding-top:14px; border-top:1px solid #eadfd3; }
-    .card {
-      border:1.5px solid #e2d3c4; border-radius:10px; padding:10px 12px; margin-bottom:8px;
-      display:flex; align-items:center; justify-content:space-between; gap:8px;
-      flex-wrap:wrap;
-    }
-    .card.saved { background:#f9f4eb; }
-    .card .info { flex:1; min-width:180px; }
-    .card .info b { display:block; font-size:13px; }
-    .card .info span { font-size:11px; color:#a08a72; }
-    .card .actions { display:flex; gap:4px; flex-wrap:wrap; }
-    .btn {
-      padding:6px 11px; border:1.5px solid #4a3b35; border-radius:8px;
-      background:#fff; color:#4a3b35; font-size:12px; cursor:pointer; white-space:nowrap;
-    }
-    .btn.primary { background:#4a3b35; color:#fff; }
-    .btn.danger { border-color:#c0392b; color:#c0392b; }
-    input, select, textarea {
-      width:100%; padding:8px 10px; border:1.5px solid #d9c9b8;
-      border-radius:8px; font-size:13px; outline:none; background:#fff;
-    }
-    textarea { resize:vertical; min-height:80px; }
-    .field { margin-bottom:14px; }
-    .field label { display:block; font-size:13px; font-weight:600; margin-bottom:5px; }
-    .inline { display:flex; gap:8px; align-items:center; }
-    #status { text-align:center; font-size:12px; color:#2f9e44; margin-top:8px; min-height:16px; }
-    details { margin-bottom:10px; }
-    details summary { font-size:12px; color:#a08a72; cursor:pointer; padding:4px 0; }
-    details .field { margin-top:8px; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#fff; color:#202020; font:14px/1.5 "Microsoft YaHei",sans-serif; }
+    button,input,select,textarea { font:inherit; }
+    button { cursor:pointer; }
+    .page { max-width:760px; margin:0 auto; padding:24px 28px 32px; }
+    .header { display:flex; align-items:center; justify-content:space-between; padding-bottom:18px; border-bottom:1px solid #eee; }
+    h1 { margin:0; font-size:20px; font-weight:500; }
+    h2 { margin:26px 0 12px; font-size:16px; font-weight:500; }
+    .subtle { color:#8b8b8b; font-size:12px; }
+    .provider-list { background:#fafafa; border-radius:8px; padding:0 18px; }
+    .provider-row { min-height:76px; display:flex; align-items:center; gap:12px; border-bottom:1px solid #ddd; }
+    .provider-row:last-child { border-bottom:0; }
+    .logo { width:28px; color:#111; font-size:18px; font-weight:700; text-align:center; flex:none; }
+    .provider-info { flex:1; min-width:0; }
+    .provider-name { font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .provider-desc { color:#999; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tag { margin-left:6px; padding:1px 6px; color:#777; border:1px solid #ddd; border-radius:3px; font-size:11px; }
+    .connect { min-width:84px; padding:8px 13px; border:1px solid #ddd; border-radius:8px; background:white; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+    .connect:hover { border-color:#aaa; background:#f7f7f7; }
+    .connect:disabled { color:#999; cursor:default; }
+    .more { width:100%; margin-top:12px; padding:9px; border:1px solid #ddd; border-radius:8px; background:#fff; }
+    .saved-row { min-height:70px; }
+    .saved-actions { display:flex; gap:6px; }
+    .danger { color:#b42318; }
+    .empty { padding:18px 0; color:#999; }
+    .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.22); z-index:20; }
+    .modal.open { display:flex; }
+    .dialog { width:min(620px,100%); max-height:88vh; overflow:auto; background:#fff; border:1px solid #ddd; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.18); }
+    .dialog-head { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; padding:16px 18px; background:#fff; border-bottom:1px solid #eee; }
+    .dialog-head h3 { margin:0; font-size:17px; font-weight:500; }
+    .close { width:34px; height:34px; border:0; background:transparent; font-size:24px; color:#777; }
+    .dialog-body { padding:16px 18px 20px; }
+    .search { width:100%; padding:11px 13px; border:0; border-radius:8px; background:#f6f6f6; outline:none; }
+    .catalog { margin-top:12px; }
+    .catalog-row { display:flex; align-items:center; gap:10px; min-height:52px; padding:7px 4px; border-bottom:1px solid #eee; }
+    .catalog-row:hover { background:#fafafa; }
+    .catalog-row .provider-info { cursor:pointer; }
+    .field { margin-bottom:13px; }
+    .field label { display:block; margin-bottom:5px; font-size:12px; font-weight:600; }
+    .field input,.field select,.field textarea { width:100%; padding:9px 10px; border:1px solid #ccc; border-radius:7px; outline:none; background:#fff; }
+    .field textarea { min-height:120px; resize:vertical; }
+    .field small { display:block; margin-top:4px; color:#999; }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+    .primary { padding:8px 16px; border:1px solid #202020; border-radius:7px; color:#fff; background:#202020; }
+    .secondary { padding:8px 16px; border:1px solid #ddd; border-radius:7px; background:#fff; }
+    #status { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); min-width:180px; padding:9px 14px; border-radius:7px; background:#202020; color:#fff; text-align:center; opacity:0; pointer-events:none; transition:opacity .15s; z-index:30; }
+    #status.show { opacity:1; }
   </style>
 </head>
 <body>
-  <h1>提供商管理</h1>
-  <div class="hint">管理你的 API 中转提供商（Provider）。添加后，在设置页选择当前使用哪一个。</div>
+  <main class="page">
+    <div class="header"><h1>提供商</h1></div>
+    <h2>热门提供商</h2>
+    <div id="popularList" class="provider-list"></div>
+    <button id="showAll" class="more">查看更多提供商</button>
+    <h2>已连接</h2>
+    <div id="savedList" class="provider-list"></div>
+  </main>
 
-  <h2>热门提供商 · 一键添加</h2>
-  <div id="presetList"></div>
-
-  <h2>已添加的提供商</h2>
-  <div id="savedList"></div>
-  <div class="field" style="margin-top:10px">
-    <details id="customAddBlock">
-      <summary>＋ 自定义新增一个 Provider</summary>
-      <div class="field"><label>名称</label><input type="text" id="customName" placeholder="我的中转站" /></div>
-      <div class="field"><label>接口地址 (baseURL)</label><input type="text" id="customUrl" placeholder="https://api.openai.com/v1" /></div>
-      <div class="field"><label>API Key</label><input type="password" id="customKey" placeholder="sk-..." /></div>
-      <div class="field"><label>模型列表（每行一个，如 gpt-4o-mini）</label><textarea id="customModels" placeholder="gpt-4o-mini&#10;gpt-4o"></textarea></div>
-      <button id="customAdd" class="btn primary" style="width:100%">添加此 Provider</button>
-    </details>
+  <div id="catalogModal" class="modal">
+    <section class="dialog">
+      <div class="dialog-head"><h3>连接提供商</h3><button class="close" data-close="catalogModal" title="关闭">×</button></div>
+      <div class="dialog-body">
+        <input id="providerSearch" class="search" type="search" placeholder="搜索提供商" />
+        <div id="catalogList" class="catalog"></div>
+      </div>
+    </section>
   </div>
 
+  <div id="configModal" class="modal">
+    <section class="dialog">
+      <div class="dialog-head"><h3 id="configTitle">连接提供商</h3><button class="close" data-close="configModal" title="关闭">×</button></div>
+      <form id="configForm" class="dialog-body">
+        <div class="field"><label for="providerName">名称</label><input id="providerName" required /></div>
+        <div class="field"><label for="providerType">接口类型</label><select id="providerType"><option value="openai">OpenAI 兼容</option><option value="anthropic">Anthropic</option></select></div>
+        <div class="field"><label for="providerUrl">接口地址 (Base URL)</label><input id="providerUrl" placeholder="https://api.openai.com/v1" required /><small id="providerEnv"></small></div>
+        <div class="field"><label for="providerKey">API Key</label><input id="providerKey" type="password" autocomplete="off" placeholder="输入 API Key" /></div>
+        <div class="field"><label for="providerModels">模型（每行一个，可写 model-id | 显示名）</label><textarea id="providerModels" required></textarea></div>
+        <div class="dialog-actions"><button type="button" class="secondary" data-close="configModal">取消</button><button class="primary" type="submit">保存连接</button></div>
+      </form>
+    </section>
+  </div>
   <div id="status"></div>
-
   <script src="provider.js"></script>
 </body>
 </html>

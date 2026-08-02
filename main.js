@@ -363,12 +363,12 @@ function toggleAppearance() {
 
 function createProviderWindow() {
   providerWin = new BrowserWindow({
-    width: 520,
-    height: 660,
+    width: 720,
+    height: 760,
     frame: true,
     resizable: true,
-    minWidth: 480,
-    minHeight: 500,
+    minWidth: 560,
+    minHeight: 560,
     show: false,
     title: '提供商管理',
     webPreferences: {
@@ -378,6 +378,11 @@ function createProviderWindow() {
     },
   });
   providerWin.loadFile(path.join(__dirname, 'src', 'renderer', 'provider.html'));
+  if (!app.isPackaged) {
+    providerWin.webContents.on('console-message', (e, level, message) => {
+      console.log('[provider]', message);
+    });
+  }
   providerWin.on('closed', () => (providerWin = null));
 }
 
@@ -486,21 +491,38 @@ async function chatAI(messages) {
     try {
       const baseUrl = legacy ? s.aiBaseUrl : (active && active.baseUrl && active.baseUrl.replace(/\/$/, ''));
       const apiKey = legacy ? s.aiApiKey : (active && active.apiKey);
-      const payload = {
-        model,
-        messages: [{ role: 'system', content: buildSystemPrompt(s) }, ...messages.slice(-20)],
-        temperature: 0.8,
-      };
-      if (effort && effort !== 'none') payload.reasoning_effort = effort;
-      const res = await fetch(`${baseUrl}/chat/completions`, {
+      const isAnthropic = !legacy && active.apiType === 'anthropic';
+      const payload = isAnthropic
+        ? {
+            model,
+            system: buildSystemPrompt(s),
+            messages: messages.slice(-20),
+            max_tokens: 1024,
+          }
+        : {
+            model,
+            messages: [{ role: 'system', content: buildSystemPrompt(s) }, ...messages.slice(-20)],
+            temperature: 0.8,
+          };
+      if (!isAnthropic && effort && effort !== 'none') payload.reasoning_effort = effort;
+      const res = await fetch(`${baseUrl}${isAnthropic ? '/messages' : '/chat/completions'}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
+        headers: isAnthropic
+          ? {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+            }
+          : {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      if (isAnthropic && Array.isArray(data.content)) {
+        return data.content.filter((part) => part.type === 'text').map((part) => part.text).join('\n');
+      }
       if (data.choices && data.choices[0]) return data.choices[0].message.content;
       return localChat(messages);
     } catch (e) {

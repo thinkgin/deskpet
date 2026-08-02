@@ -196,6 +196,14 @@ openProvider.addEventListener('click', () => {
   window.api.openProviderPage();
 });
 
+window.addEventListener('focus', async () => {
+  const latest = await window.api.loadSettings();
+  settings = { ...settings, ...latest };
+  providers = Array.isArray(latest.providers) ? latest.providers : [];
+  renderProviderSelect();
+  renderModelSelect();
+});
+
 activeProviderId.addEventListener('change', () => {
   settings.activeProviderId = activeProviderId.value;
   settings.activeModel = '';

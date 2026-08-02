@@ -14,6 +14,7 @@ let appearanceWin = null;
 let providerWin = null;
 let bubbleWin = null;
 let bubbleSize = { width: 80, height: 52 };
+let pendingBubblePayload = null;
 let tray = null;
 let isQuitting = false;
 let petDrag = null; // 主进程驱动的拖拽状态：{ interval, startCursor, startBounds, lastCursor, idleTicks }
@@ -411,6 +412,11 @@ function createBubbleWindow() {
   bubbleWin.setIgnoreMouseEvents(true);
   bubbleWin.setAlwaysOnTop(true, 'screen-saver');
   bubbleWin.loadFile(path.join(__dirname, 'src', 'renderer', 'bubble.html'));
+  bubbleWin.webContents.on('did-finish-load', () => {
+    if (pendingBubblePayload && bubbleWin) {
+      bubbleWin.webContents.send('pet:bubbleContent', pendingBubblePayload);
+    }
+  });
   bubbleWin.on('closed', () => (bubbleWin = null));
 }
 
@@ -949,15 +955,17 @@ ipcMain.on('pet:setBubbleLayout', (e, layout) => {
 
 ipcMain.on('pet:bubbleShow', (e, payload) => {
   if (!bubbleWin) createBubbleWindow();
-  const send = () => {
-    if (!bubbleWin) return;
-    bubbleWin.webContents.send('pet:bubbleContent', payload || {});
-  };
-  if (bubbleWin.webContents.isLoading()) bubbleWin.webContents.once('did-finish-load', send);
-  else send();
+  pendingBubblePayload = payload || {};
+  // 不依赖渲染层回报尺寸才显示：加载动画先立即出现，内容就绪后再校正大小。
+  const initial = pendingBubblePayload.loading ? { width: 72, height: 52 } : bubbleSize;
+  placeBubble(initial.width, initial.height);
+  if (!bubbleWin.webContents.isLoading()) {
+    bubbleWin.webContents.send('pet:bubbleContent', pendingBubblePayload);
+  }
 });
 
 ipcMain.on('pet:bubbleSize', (e, size) => {
+  if (!bubbleWin) return;
   const width = Math.min(Math.max(Math.round(Number(size && size.width) || 80), 64), 272);
   const height = Math.min(Math.max(Math.round(Number(size && size.height) || 48), 44), 180);
   bubbleSize = { width, height };
@@ -970,6 +978,7 @@ ipcMain.on('pet:bubbleReady', () => {
 });
 
 ipcMain.on('pet:bubbleHide', () => {
+  pendingBubblePayload = null;
   if (bubbleWin) bubbleWin.hide();
 });
 

@@ -64,17 +64,6 @@ closeBtn.addEventListener('click', () => {
   window.api.closeChat();
 });
 
-const clearMemBtn = document.getElementById('clearMem');
-clearMemBtn.addEventListener('click', async () => {
-  if (!confirm('清空宠物对本次对话的记忆？')) return;
-  try {
-    await window.api.clearMemory();
-    history = [];
-    msgsEl.innerHTML = '';
-    addMsg('pet', '好啦主人，我把之前的事忘掉啦，从今天重新开始~');
-  } catch (e) { /* ignore */ }
-});
-
 window.api.onChatOpen(() => {
   input.focus();
 });

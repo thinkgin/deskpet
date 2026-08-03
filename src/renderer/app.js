@@ -91,12 +91,14 @@ function playTone(freq, dur, type, vol, delay = 0) {
 function say(text, ms = 2600) {
   bubbleText.textContent = text;
   clearTimeout(bubbleTimer);
+  setLevelBadgeVisible(false);
   window.api.showPetBubble({ text, loading: false });
   bubbleTimer = setTimeout(hideBubble, ms);
 }
 
 function showBubbleLoading() {
   clearTimeout(bubbleTimer);
+  setLevelBadgeVisible(false);
   window.api.showPetBubble({ text: '', loading: true });
 }
 
@@ -446,6 +448,12 @@ window.addEventListener('pointerleave', () => {
   if (badge) badge.classList.remove('visible');
 });
 
+function setLevelBadgeVisible(visible) {
+  const badge = document.getElementById('levelBadge');
+  if (!badge) return;
+  badge.classList.toggle('visible', !!visible);
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
   dragging = true;
@@ -551,13 +559,11 @@ window.api.onSettingsChanged(() => {
 });
 
 (function bindHover() {
-  const badge = document.getElementById('levelBadge');
   let hideTimer = null;
   window.addEventListener('pointermove', () => {
-    if (!badge) return;
-    badge.classList.add('visible');
+    setLevelBadgeVisible(true);
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => badge.classList.remove('visible'), 1200);
+    hideTimer = setTimeout(() => setLevelBadgeVisible(false), 1200);
   });
 })();
 

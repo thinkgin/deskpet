@@ -46,10 +46,20 @@
     .prov-card .info b { display: block; font-size: 13px; }
     .prov-card .info span { color: #a08a72; font-size: 11px; }
     .prov-actions { display: flex; gap: 4px; }
+    .level-card { border: 1.5px solid #eadfd3; border-radius: 12px; background: #fff7ec; padding: 12px 14px; margin: -4px 0 16px; }
+    .level-card b { font-size: 16px; }
+    .level-bar { height: 8px; border-radius: 999px; background: #eadfd3; overflow: hidden; margin-top: 8px; }
+    .level-fill { height: 100%; width: 0; background: #b0876a; transition: width .2s ease; }
   </style>
 </head>
 <body>
   <h1>桌面宠物 · 设置</h1>
+
+  <div class="level-card">
+    <b id="levelText">Lv.1</b>
+    <div class="hint" id="levelHint">成长经验加载中...</div>
+    <div class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+  </div>
 
   <h2>AI 对话（Provider · 模型 · 推理等级）</h2>
 

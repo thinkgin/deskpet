@@ -91,14 +91,12 @@ function playTone(freq, dur, type, vol, delay = 0) {
 function say(text, ms = 2600) {
   bubbleText.textContent = text;
   clearTimeout(bubbleTimer);
-  setLevelBadgeVisible(false);
   window.api.showPetBubble({ text, loading: false });
   bubbleTimer = setTimeout(hideBubble, ms);
 }
 
 function showBubbleLoading() {
   clearTimeout(bubbleTimer);
-  setLevelBadgeVisible(false);
   window.api.showPetBubble({ text: '', loading: true });
 }
 
@@ -245,11 +243,7 @@ async function refreshGrowth() {
 }
 
 function updateBadge() {
-  const el = document.getElementById('levelBadge');
-  if (el) {
-    const need = Math.max(growth.expToNext || 0, 1);
-    el.textContent = `Lv.${growth.level} · ${growth.exp}/${need}`;
-  }
+  // 等级只在设置页显示，不再悬浮在宠物窗口里。
 }
 
 async function gainExp(amount) {
@@ -444,15 +438,7 @@ window.addEventListener('pointerleave', () => {
     window.api.setClickThrough(true);
     if (actionOpen) hideActions();
   }
-  const badge = document.getElementById('levelBadge');
-  if (badge) badge.classList.remove('visible');
 });
-
-function setLevelBadgeVisible(visible) {
-  const badge = document.getElementById('levelBadge');
-  if (!badge) return;
-  badge.classList.toggle('visible', !!visible);
-}
 
 canvas.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
@@ -557,15 +543,6 @@ window.api.onTrayAction((action) => {
 window.api.onSettingsChanged(() => {
   window.location.reload();
 });
-
-(function bindHover() {
-  let hideTimer = null;
-  window.addEventListener('pointermove', () => {
-    setLevelBadgeVisible(true);
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => setLevelBadgeVisible(false), 1200);
-  });
-})();
 
 (async () => {
   await loadAll();

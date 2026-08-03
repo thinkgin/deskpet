@@ -27,6 +27,9 @@ const openProvider = document.getElementById('openProvider');
 const saveBtn = document.getElementById('save');
 const saveAlsoBtn = document.getElementById('saveAlso');
 const statusEl = document.getElementById('status');
+const levelText = document.getElementById('levelText');
+const levelHint = document.getElementById('levelHint');
+const levelFill = document.getElementById('levelFill');
 
 const PETS = [
   { id: 'cat', name: '像素小猫 · 咪咪' },
@@ -54,6 +57,19 @@ function computeAge(birthday) {
 
 function updateAgeText() {
   petAgeText.value = computeAge(petBirthday.value);
+}
+
+async function loadGrowth() {
+  try {
+    const g = await window.api.getGrowth();
+    const need = Math.max(Number(g && g.expToNext) || 1, 1);
+    const exp = Math.max(Number(g && g.exp) || 0, 0);
+    levelText.textContent = 'Lv.' + (g && g.level ? g.level : 1);
+    levelHint.textContent = '成长经验 ' + exp + ' / ' + need;
+    levelFill.style.width = Math.min(100, Math.round(exp / need * 100)) + '%';
+  } catch (e) {
+    levelHint.textContent = '成长经验暂时不可用';
+  }
 }
 
 function renderProviderSelect() {
@@ -166,6 +182,7 @@ function onShutdownModeChange() {
   renderProviderSelect();
   renderModelSelect();
   loadShutdownStatus();
+  loadGrowth();
   onShutdownModeChange();
 })();
 

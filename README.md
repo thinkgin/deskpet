@@ -39,6 +39,33 @@ npm run pack
 # 产物在 dist/ 下
 ```
 
+## 配置 AI 对话（DeepSeek）
+
+宠物支持 AI 陪聊，配置简单、成本极低。
+
+### 1. 获取 API Key
+
+去 [DeepSeek 开放平台](https://platform.deepseek.com/) 注册账号，在「API Keys」页面创建一个 Key，**充值 10 元即可**。
+
+### 2. 在设置里填写
+
+打开设置 → 点击「打开提供商管理窗口」→ 添加 Provider：
+
+| 字段 | 值 |
+| --- | --- |
+| 名称 | DeepSeek |
+| Base URL | `https://api.deepseek.com/v1` |
+| API Key | 粘贴你创建的 Key |
+| 模型 | `deepseek-chat` |
+
+保存后，在设置页的「用来对话的 Provider」下拉里选中 DeepSeek 即可。
+
+### 3. 实测费用
+
+> 10 元的 Key，测试下来 **2 分钱对话了 80 次**，日常陪聊基本等于无限用。
+
+即使每天聊几十句，10 块钱也能用很久。想省的话还可以开 DeepSeek 的「夜间折扣」或蹭每天免费额度。
+
 ## 功能
 
 - **养成系统**：饱食 / 心情 / 清洁 / 健康 / 亲密度，会随时间自然衰减，需要投喂、玩耍、洗澡来维持。

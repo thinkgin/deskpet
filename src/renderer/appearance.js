@@ -518,10 +518,27 @@ function tick() {
 // ---------- 事件绑定 ----------
 function bindSlotClicks() {
   document.querySelectorAll('.slot').forEach((el) => {
-    el.addEventListener('click', () => {
-      if (el.classList.contains('system')) return;
+    el.addEventListener('click', async () => {
       const idx = parseInt(el.dataset.idx, 10);
       if (idx === currentSlot) return;
+      if (idx === -1) {
+        // 系统小猫：无编辑/使用按钮，点击直接切换
+        if (activePetId === 'cat') {
+          selectSlot(-1);
+          return;
+        }
+        let petName = '';
+        try {
+          const s = await window.api.loadSettings();
+          petName = (s && s.petName) || '';
+        } catch (e) { /* ignore */ }
+        await window.api.saveAppearance({ activePetId: 'cat', petName });
+        activePetId = 'cat';
+        selectSlot(-1);
+        statusEl.textContent = '已切换到系统小猫「' + cat.name + '」，宠物窗口将更新 ✓';
+        setTimeout(() => (statusEl.textContent = ''), 1500);
+        return;
+      }
       selectSlot(idx);
     });
   });

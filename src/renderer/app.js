@@ -706,6 +706,7 @@ function setupFileDrop() {
     if (fileDragArmed) return;
     fileDragArmed = true;
     stage.classList.add('file-drag-over');
+    playAnim('drag'); // 惊讶张嘴，等待投喂
   });
 
   // 光标离开或超时 → 恢复穿透
@@ -713,6 +714,7 @@ function setupFileDrop() {
     if (!fileDragArmed) return;
     fileDragArmed = false;
     stage.classList.remove('file-drag-over');
+    playAnim('idle');
   });
 
   document.addEventListener('dragover', (e) => { e.preventDefault(); });
@@ -724,6 +726,7 @@ function setupFileDrop() {
     // 通知主进程恢复穿透
     window.api.fileDropDone();
     if (!isPixelInteractive(e.clientX, e.clientY)) {
+      playAnim('idle');
       say('要把文件放到我身上才吃得到喵~');
       return;
     }

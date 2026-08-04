@@ -120,10 +120,8 @@ html, body {
   transform: scale(1.08);
 }
 
-/* 文件拖拽投喂状态 */
-#stage.file-drag-over {
-  outline: 3px dashed #4caf50;
-  outline-offset: -2px;
-  border-radius: 8px;
-  filter: drop-shadow(0 0 10px rgba(76, 175, 80, 0.5));
+/* 文件拖拽投喂状态：柔光只贴合宠物轮廓，不画窗框 */
+#stage.file-drag-over #pet,
+#stage.file-drag-over #pet3d {
+  filter: drop-shadow(0 0 10px rgba(76, 175, 80, 0.55));
 }

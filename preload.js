@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   loadState: () => ipcRenderer.invoke('state:load'),
@@ -49,7 +49,7 @@ contextBridge.exposeInMainWorld('api', {
   getShutdownStatus: () => ipcRenderer.invoke('shutdown:getStatus'),
   scheduleShutdown: (cfg) => ipcRenderer.invoke('shutdown:schedule', cfg),
   cancelShutdown: () => ipcRenderer.invoke('shutdown:cancel'),
-  feedFiles: () => ipcRenderer.invoke('file:feed'),
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   trashFiles: (paths) => ipcRenderer.invoke('file:trash', paths),
   onFileDragEnter: (cb) => ipcRenderer.on('file:dragEnter', () => cb()),
   onFileDragLeave: (cb) => ipcRenderer.on('file:dragLeave', () => cb()),

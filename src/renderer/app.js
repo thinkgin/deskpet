@@ -723,13 +723,21 @@ function setupFileDrop() {
     fileDragArmed = false;
     // 通知主进程恢复穿透
     window.api.fileDropDone();
+    if (!isPixelInteractive(e.clientX, e.clientY)) {
+      say('要把文件放到我身上才吃得到喵~');
+      return;
+    }
     const files = e.dataTransfer && e.dataTransfer.files;
     if (!files || !files.length) return;
     const paths = [];
     for (const f of files) {
-      if (f.path) paths.push(f.path);
+      const filePath = window.api.getPathForFile(f);
+      if (filePath) paths.push(filePath);
     }
-    if (!paths.length) return;
+    if (!paths.length) {
+      say('呜…读取不到这个文件…');
+      return;
+    }
     const r = await window.api.trashFiles(paths);
     if (r && r.ok && r.count > 0) {
       stats.hunger = clamp(stats.hunger + 8);

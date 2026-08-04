@@ -45,7 +45,7 @@ const defaultSettings = {
   petBirthday: '', // YYYY-MM-DD，空则不显示岁数
   soundOn: true,
   autoWalk: true,
-  fileEatEnabled: false, // 文件投喂：拖拽/右键投喂文件，进入回收站
+  fileEatEnabled: false, // 文件投喂：拖拽文件到宠物身上，进入回收站
   petScale: 5,
   aiApiKey: '',
   aiBaseUrl: 'https://api.openai.com/v1',
@@ -242,6 +242,8 @@ function cfgModeNext(cfg) {
 let dragPollTimer = null;
 let dragPollActive = false;
 let dragPollTimeout = null;
+let dragPollLastCursor = null;
+let dragPollMovingTicks = 0;
 
 function startFileDragPoll() {
   if (dragPollTimer) return;
@@ -253,7 +255,11 @@ function startFileDragPoll() {
     const bounds = petWin.getBounds();
     const inBounds = cursor.x >= bounds.x && cursor.x <= bounds.x + bounds.width &&
                      cursor.y >= bounds.y && cursor.y <= bounds.y + bounds.height;
-    if (inBounds && !dragPollActive) {
+    const moved = !dragPollLastCursor || cursor.x !== dragPollLastCursor.x || cursor.y !== dragPollLastCursor.y;
+    dragPollLastCursor = cursor;
+    dragPollMovingTicks = moved ? Math.min(dragPollMovingTicks + 1, 10) : Math.max(dragPollMovingTicks - 1, 0);
+    // 连续移动时才解除穿透，避免鼠标静止在宠物上影响普通点击。
+    if (inBounds && dragPollMovingTicks >= 2 && !dragPollActive) {
       dragPollActive = true;
       petWin.setIgnoreMouseEvents(false);
       petWin.webContents.send('file:dragEnter');
@@ -266,7 +272,7 @@ function startFileDragPoll() {
             petWin.webContents.send('file:dragLeave');
           }
         }
-      }, 2500);
+      }, 5000);
     }
     if (!inBounds && dragPollActive) {
       dragPollActive = false;
@@ -280,6 +286,8 @@ function startFileDragPoll() {
 function stopFileDragPoll() {
   if (dragPollTimer) { clearInterval(dragPollTimer); dragPollTimer = null; }
   if (dragPollTimeout) { clearTimeout(dragPollTimeout); dragPollTimeout = null; }
+  dragPollLastCursor = null;
+  dragPollMovingTicks = 0;
   if (dragPollActive) {
     dragPollActive = false;
     if (petWin && !petWin.isDestroyed()) {
@@ -913,40 +921,26 @@ ipcMain.handle('models3d:save', (e, data) => {
 });
 ipcMain.handle('chat:send', (e, messages) => chatAI(messages));
 
-// ---------- 文件投喂：选中的文件进入回收站 ----------
-ipcMain.handle('file:feed', async () => {
-  const win = BrowserWindow.getFocusedWindow() || petWin || settingsWin || appearanceWin;
-  const res = await dialog.showOpenDialog(win, {
-    title: '投喂文件（将进入回收站）',
-    properties: ['openFile', 'multiSelections'],
-  });
-  if (res.canceled || !res.filePaths.length) return { ok: false, canceled: true };
-  const results = [];
-  for (const fp of res.filePaths) {
-    try {
-      await shell.trashItem(fp);
-      results.push({ name: path.basename(fp), ok: true });
-    } catch (err) {
-      results.push({ name: path.basename(fp), ok: false });
-    }
-  }
-  const okResults = results.filter((r) => r.ok);
-  return { ok: true, count: okResults.length, total: results.length, names: okResults.map((r) => r.name) };
-});
-
 // 直接传入路径删除到回收站（供拖拽投喂使用）
 ipcMain.handle('file:trash', async (e, filePaths) => {
-  if (!Array.isArray(filePaths) || !filePaths.length) return { ok: false, count: 0 };
+  if (!getSettings().fileEatEnabled) return { ok: false, count: 0, error: '文件投喂未开启' };
+  if (!Array.isArray(filePaths) || !filePaths.length) return { ok: false, count: 0, error: '未收到文件路径' };
   let count = 0;
   const names = [];
+  const errors = [];
   for (const fp of filePaths) {
     try {
-      await shell.trashItem(fp);
+      const resolved = path.resolve(String(fp || ''));
+      const stat = fs.statSync(resolved);
+      if (!stat.isFile()) throw new Error('仅支持文件');
+      await shell.trashItem(resolved);
       count++;
-      names.push(path.basename(fp));
-    } catch (err) { /* 跳过失败的文件 */ }
+      names.push(path.basename(resolved));
+    } catch (err) {
+      errors.push(String(err && err.message ? err.message : err));
+    }
   }
-  return { ok: count > 0, count, names };
+  return { ok: count > 0, count, names, errors };
 });
 ipcMain.handle('greeting:get', () => ({ greeting: getGreeting(), festival: getFestival() }));
 ipcMain.handle('providers:get', () => OPENCODE_PRESETS.map((p, i) => ({ id: `template-${i}`, ...p, apiKey: '' })));

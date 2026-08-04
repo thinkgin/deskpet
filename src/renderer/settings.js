@@ -122,6 +122,18 @@ function renderModelSelect() {
   }
 }
 
+// ---------- 宠物形象选择 ----------
+function renderPetOptions() {
+  petSel.innerHTML = '';
+  PETS.forEach((p) => {
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = p.name;
+    petSel.appendChild(o);
+  });
+  petSel.value = settings.petId || 'cat';
+}
+
 function persist() {
   return window.api.saveSettings({
     providers,
@@ -166,7 +178,7 @@ function onShutdownModeChange() {
     opt.textContent = p.name;
     petSel.appendChild(opt);
   });
-  petSel.value = settings.petId || 'cat';
+  renderPetOptions();
   petName.value = settings.petName || '';
   masterAddress.value = settings.masterAddress || '主人';
   petGender.value = settings.petGender || '女生';
@@ -219,6 +231,7 @@ window.addEventListener('focus', async () => {
   providers = Array.isArray(latest.providers) ? latest.providers : [];
   renderProviderSelect();
   renderModelSelect();
+  renderPetOptions();
 });
 
 activeProviderId.addEventListener('change', () => {
@@ -237,7 +250,7 @@ petBirthday.addEventListener('change', updateAgeText);
 
 function collect() {
   return {
-    petId: petSel.value,
+    petId: petSel.options.length ? (petSel.value || settings.petId || 'cat') : 'cat',
     petName: petName.value.trim() || '咪咪',
     masterAddress: masterAddress.value.trim() || '主人',
     petGender: petGender.value,

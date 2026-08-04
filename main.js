@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, Notification, screen, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, Notification, screen, nativeImage, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
@@ -52,6 +52,9 @@ const defaultSettings = {
   systemPrompt: '你是一只住在电脑桌上、名叫{name}的小猫，性格温柔陪伴可爱，喜欢陪{address}聊天。用简短、温暖、口语化的中文回复，经常关心{address}。',
   // 自定义 AI 形象：最多 6 个槽位（index 0~5），每个为 null 或自定义形象数据
   customPets: [null, null, null, null, null, null],
+  // 3D 外观槽位：3 个，仅保存导入到应用数据目录的 .glb 模型
+  slots3D: [null, null, null],
+  activeSlot3D: 0, // 当前使用的 3D 槽位索引（0~2）
   // AI 对话 Provider 配置（多套可保存的预设；activeProviderId='custom' 或 '' 时回落用 aiBaseUrl/aiApiKey/aiModel）
   providers: [],
   activeProviderId: '',
@@ -747,6 +750,101 @@ ipcMain.on('providers:close', () => {
 ipcMain.on('settings:open', () => toggleSettings());
 ipcMain.on('settings:close', () => {
   if (settingsWin) settingsWin.hide();
+});
+
+// ---------- 3D 外观（三个 GLB 文件槽位） ----------
+const models3DDir = path.join(app.getPath('userData'), 'models3d');
+function normalizeSlots3D(s) {
+  const arr = Array.isArray(s && s.slots3D) ? s.slots3D : [];
+  return Array.from({ length: 3 }, (_, i) => {
+    const slot = arr[i];
+    if (!slot || slot.type !== 'glb' || !slot.glbPath) return null;
+    const modelPath = path.resolve(slot.glbPath);
+    const modelRoot = path.resolve(models3DDir) + path.sep;
+    if (!modelPath.startsWith(modelRoot)) return null;
+    return { type: 'glb', glbPath: modelPath, name: slot.name || `模型 ${i + 1}` };
+  });
+}
+function getSlots3D() {
+  return normalizeSlots3D(getSettings());
+}
+// 读取导入的 .glb 文件为二进制（供渲染层 GLTFLoader 解析）
+ipcMain.handle('models3d:readGlb', (e, index) => {
+  const slots = getSlots3D();
+  const i = Math.max(0, Math.min(2, Number(index) || 0));
+  const slot = slots[i];
+  if (!slot || slot.type !== 'glb' || !slot.glbPath) return { ok: false, error: '该槽位未导入模型' };
+  try {
+    const buf = fs.readFileSync(slot.glbPath);
+    return { ok: true, data: buf.toString('base64') };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+// 打开文件对话框导入 .glb 到指定槽位
+ipcMain.handle('models3d:import', async (e, index) => {
+  const i = Math.max(0, Math.min(2, Number(index) || 0));
+  const win = BrowserWindow.getFocusedWindow() || settingsWin || appearanceWin || petWin;
+  const opts = {
+    title: '导入 3D 模型（.glb）',
+    filters: [{ name: '3D 模型', extensions: ['glb'] }],
+    properties: ['openFile'],
+  };
+  const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
+  if (res.canceled || !res.filePaths || !res.filePaths[0]) return { ok: false, canceled: true };
+  const src = res.filePaths[0];
+  try {
+    const stat = fs.statSync(src);
+    if (!stat.isFile()) return { ok: false, error: '请选择有效的 .glb 文件' };
+    if (stat.size > 100 * 1024 * 1024) return { ok: false, error: '模型文件不能超过 100 MB' };
+    const header = Buffer.alloc(4);
+    const fd = fs.openSync(src, 'r');
+    try { fs.readSync(fd, header, 0, 4, 0); } finally { fs.closeSync(fd); }
+    if (header.toString('ascii') !== 'glTF') return { ok: false, error: '文件不是有效的二进制 GLB 模型' };
+    fs.mkdirSync(models3DDir, { recursive: true });
+    const dest = path.join(models3DDir, `slot${i}-${Date.now()}.glb`);
+    fs.copyFileSync(src, dest);
+    const s = getSettings();
+    const slots = getSlots3D();
+    const previous = slots[i];
+    slots[i] = { type: 'glb', glbPath: dest, name: path.basename(src, '.glb') };
+    saveJSON(settingsFile, { ...s, slots3D: slots, activeSlot3D: i, petId: `3d:${i}` });
+    if (previous && previous.glbPath !== dest) {
+      try { fs.unlinkSync(previous.glbPath); } catch (err) { /* 文件可能已被用户删除 */ }
+    }
+    if (petWin) petWin.webContents.send('settings:changed');
+    return { ok: true, slots3D: slots, activeSlot3D: i };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+});
+// 读取当前 3D 槽位配置
+ipcMain.handle('models3d:getSlots', () => {
+  const s = getSettings();
+  return { slots3D: getSlots3D(), activeSlot3D: Math.max(0, Math.min(2, Number(s.activeSlot3D) || 0)) };
+});
+// 保存当前槽位或清空槽位；模型路径只能来自主进程的导入流程
+ipcMain.handle('models3d:save', (e, data) => {
+  const s = getSettings();
+  const merged = { ...s };
+  if (data && Array.isArray(data.slots3D)) {
+    const current = getSlots3D();
+    merged.slots3D = Array.from({ length: 3 }, (_, i) => {
+      const requested = data.slots3D[i];
+      const existing = current[i];
+      if (!requested && existing) {
+        try { fs.unlinkSync(existing.glbPath); } catch (err) { /* 文件可能已被用户删除 */ }
+        return null;
+      }
+      return existing;
+    });
+  }
+  if (data && data.activeSlot3D != null) merged.activeSlot3D = Math.max(0, Math.min(2, Number(data.activeSlot3D) || 0));
+  const activeSlot = normalizeSlots3D(merged)[merged.activeSlot3D];
+  if (String(merged.petId || '').startsWith('3d:') && !activeSlot) merged.petId = 'cat';
+  saveJSON(settingsFile, merged);
+  if (petWin) petWin.webContents.send('settings:changed');
+  return { slots3D: merged.slots3D, activeSlot3D: merged.activeSlot3D };
 });
 ipcMain.handle('chat:send', (e, messages) => chatAI(messages));
 ipcMain.handle('greeting:get', () => ({ greeting: getGreeting(), festival: getFestival() }));

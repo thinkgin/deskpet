@@ -2,11 +2,26 @@
 
 像素风桌面宠物，主打情感陪伴，类似当年的 QQ 宠物。
 
+![桌面宠物截图](show.png)
+
+## 开源 & 开发
+
+本项目采用 MIT 协议开源，欢迎 Star 和 PR。
+
+整个项目的开发过程几乎完全由 AI 完成，使用的 AI 工具是 [opencode](https://github.com/anomalyco/opencode)，主要靠里面的免费模型额度一路写下来。
+
+免费模型搞不定的地方，靠这两个中转站补上：
+
+* [kklt](https://fuckme.kklt.lol/) — 便宜、模型全
+* [443AI](https://fuckme.443.hk/) — 价格实惠、接口稳定
+
+这两个中转便宜好用，覆盖了免费模型覆盖不到的场景。项目还会持续迭代，欢迎大家给个 Star ⭐
+
 ## 快速使用
 
 ### 直接安装（已打包）
 
-- 安装包：`dist/Desktop Pet Setup 1.1.0.exe`
+- 安装包：`dist/Desktop Pet Setup 1.26.0.exe`
 - 双击安装后，桌面右下角托盘会出现宠物图标，宠物会出现在屏幕上。
 - 如果没有安装包，见下方「从源码打包」。
 
@@ -28,6 +43,7 @@ npm run pack
 
 - **养成系统**：饱食 / 心情 / 清洁 / 健康 / 亲密度，会随时间自然衰减，需要投喂、玩耍、洗澡来维持。
 - **互动反应**：左键点它（戳它）、按住拖拽移动、右键弹出操作按钮。
+- **3D 外观**：支持导入 `.glb` 模型作为宠物外观，可在形象面板中导入、替换、切换和管理。
 - **气泡对话**：宠物会在头顶气泡说话，早安晚安、节日祝福、饿了脏了都会主动说。
 - **AI 对话**：设置里填入 OpenAI 兼容的 API Key 后可真正陪聊；留空则用内置的可爱回复。
 - **日常陪伴**：定时提醒喝水休息、节日祝福。
@@ -84,11 +100,9 @@ if (typeof window !== 'undefined') window.__catDef = catDef;
 - 颜色从 `palette` 里按字符查表，可以自己配色。
 - 用 `scripts/preview-pet.js` 可在终端里预览像素画效果。
 
-### 未来的 3D 宠物
+### 3D 模型制作
 
-`type` 字段预留了扩展空间。要做 3D 宠物时：
-1. 新建一个 `type: '3d'` 的宠物定义，`frames` 替换为 3D 渲染数据（如 glTF/程序化网格）。
-2. 在 `pet-engine.js` 的绘制逻辑里按 `pet.type` 分支，走 3D 渲染管线即可，其余养成、互动、对话系统全部复用，无需改动。
+支持导入 `.glb` 格式的 3D 模型作为宠物外观，详细制作与导入指南见 [docs/3d-model-guide.md](docs/3d-model-guide.md)。免费工具推荐 Blender、Meshy、Tripo AI、Mixamo 等。
 
 ## 配置数据
 
@@ -99,4 +113,5 @@ if (typeof window !== 'undefined') window.__catDef = catDef;
 
 - Electron 33
 - 原生 Canvas 像素渲染，无第三方运行时依赖
+- Three.js（3D 模型渲染）
 - 数据持久化：JSON 文件（userData 目录）

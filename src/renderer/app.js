@@ -3,6 +3,7 @@ const cat = window.__catDef;
 const pc = window.__pixelCompose;
 
 const canvas = document.getElementById('pet');
+const pet3dEl = document.getElementById('pet3d');
 const bubble = document.getElementById('bubble');
 const bubbleText = document.getElementById('bubble-text');
 const actionsBox = document.getElementById('actions');
@@ -13,7 +14,11 @@ const pets = { cat };
 let state = null;
 let settings = null;
 let engine = null;
+let pet3d = null;          // 3D 渲染器实例
+let appearanceMode = '2d'; // '2d' | '3d'
 let currentPetId = 'cat';
+let currentSlot3D = 0;     // 当前 3D 槽位索引（0~2）
+let slots3D = [];          // [null | { type:'glb', glbPath, name }]
 let petScale = 5;
 let stats = { hunger: 80, mood: 80, clean: 80, health: 90, affection: 0 };
 let affectionTotal = 0;
@@ -133,7 +138,8 @@ const cuteDialogues = [
 ];
 
 async function tapPet() {
-  engine.play('blink');
+  if (appearanceMode === '3d' && pet3d) pet3d.play('drag');
+  else if (engine) engine.play('blink');
   playS('meow');
   // 优先走 AI 模型回答
   try {
@@ -141,13 +147,18 @@ async function tapPet() {
     const reply = await window.api.tapAI();
     if (reply) {
       say(reply, 3200);
-      setTimeout(() => engine.play('idle'), 900);
+      setTimeout(() => playAnim('idle'), 900);
       return;
     }
   } catch { /* 网络/模型异常，兜底预设 */ }
   hideBubble();
   say(cuteDialogues[Math.floor(Math.random() * cuteDialogues.length)]);
-  setTimeout(() => engine.play('idle'), 900);
+  setTimeout(() => playAnim('idle'), 900);
+}
+
+function playAnim(name) {
+  if (appearanceMode === '3d' && pet3d) pet3d.play(name);
+  else if (engine) engine.play(name);
 }
 
 function clamp(v, lo = 0, hi = 100) {
@@ -167,6 +178,8 @@ async function loadAll() {
   state = await window.api.loadState();
   settings = await window.api.loadSettings();
   currentPetId = settings.petId || 'cat';
+  currentSlot3D = Math.max(0, Math.min(2, Number(settings.activeSlot3D) || 0));
+  slots3D = await loadSlots3D();
   petScale = Math.min(Math.max(Number(settings.petScale) || 5, 3), 12);
   stats = { ...stats, ...(state.stats || {}) };
   affectionTotal = state.affectionTotal || 0;
@@ -191,7 +204,23 @@ async function loadAll() {
   resizeWindow();
 }
 
+async function loadSlots3D() {
+  try {
+    const r = await window.api.getSlots3D();
+    if (r && Array.isArray(r.slots3D)) return r.slots3D;
+  } catch (e) { /* ignore */ }
+  return [null, null, null];
+}
+
 function resizeWindow() {
+  if (appearanceMode === '3d') {
+    const k = petsScale();
+    const w = Math.max(Math.round(20 * k) + 40, 160);
+    const h = Math.max(Math.round(20 * k) + 60, 150);
+    baseWindowSize = { width: w, height: h };
+    window.api.setWindowSize(w, h);
+    return;
+  }
   const def = pets[currentPetId] || cat;
   const s = def.size || { w: 16, h: 16 };
   const k = petsScale();
@@ -216,10 +245,87 @@ function healthFromOthers() {
 }
 
 function switchPet(id) {
-  currentPetId = id;
+  if (id && id.indexOf('3d:') === 0) {
+    const slot = parseInt(id.split(':')[1], 10);
+    if (!isNaN(slot)) currentSlot3D = Math.max(0, Math.min(2, slot));
+    currentPetId = id;
+    switchTo3D(currentSlot3D);
+    return;
+  }
+  currentPetId = id || 'cat';
+  switchTo2D(currentPetId);
+}
+
+// ---------- 3D 外观模式 ----------
+function switchTo2D(id) {
+  appearanceMode = '2d';
+  if (pet3d) {
+    pet3d.dispose();
+    pet3d = null;
+  }
+  pet3dEl.style.display = 'none';
+  canvas.style.display = '';
   const def = pets[id] || cat;
   engine = new Engine(canvas, def, petsScale());
   engine.play('idle');
+  resizeWindow();
+}
+
+function switchTo3D(slotIndex) {
+  const slot = slots3D && slots3D[slotIndex];
+  if (!slot || slot.type !== 'glb') {
+    fallbackTo2D('请先在设置中为该槽位导入 .glb 模型');
+    return;
+  }
+  appearanceMode = '3d';
+  currentSlot3D = slotIndex;
+  if (engine) { engine = null; }
+  canvas.style.display = 'none';
+  pet3dEl.style.display = 'block';
+  if (!pet3d) {
+    try {
+      pet3d = new window.__Pet3D.Pet3D(pet3dEl);
+    } catch (e) {
+      console.error('WebGL init error', e);
+      fallbackTo2D();
+      return;
+    }
+  }
+  pet3d.resize();
+  load3DModel(slotIndex);
+  resizeWindow();
+}
+
+async function load3DModel(slotIndex) {
+  const slot = (slots3D && slots3D[slotIndex]) || null;
+  if (!pet3d) return;
+  try {
+    const r = await window.api.readGlb(slotIndex);
+    if (r && r.ok && r.data) {
+      const bin = Uint8Array.from(atob(r.data), (c) => c.charCodeAt(0));
+      const ab = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength);
+      await pet3d.loadGlb(ab);
+      pet3d.play('idle');
+    } else {
+      fallbackTo2D((r && r.error) || '3D 模型读取失败');
+    }
+  } catch (e) {
+    console.error('3D load error', e);
+    fallbackTo2D('3D 模型加载失败');
+  }
+}
+
+function fallbackTo2D(message) {
+  // 无 WebGL：回退像素 2D
+  appearanceMode = '2d';
+  if (pet3d) { pet3d.dispose(); pet3d = null; }
+  pet3dEl.style.display = 'none';
+  canvas.style.display = '';
+  const def = pets[currentPetId] || cat;
+  engine = new Engine(canvas, def, petsScale());
+  engine.play('idle');
+  resizeWindow();
+  if (message) say(message, 3200);
 }
 
 function persist() {
@@ -264,8 +370,12 @@ async function gainExp(amount) {
 }
 
 function applyGrowth() {
-  // 体型系数：在基础尺寸上放大；更新引擎与窗口以反映体型变化
+  // 体型系数：在基础尺寸上放大；更新引擎/3D 渲染器与窗口以反映体型变化
   document.documentElement.style.setProperty('--growth-scale', String(growth.scale || 1));
+  if (appearanceMode === '3d') {
+    resizeWindow();
+    return;
+  }
   if (engine && settings && currentPetId) {
     try {
       const def = pets[currentPetId] || cat;
@@ -309,11 +419,11 @@ function doAction(act) {
       stats.mood = clamp(stats.mood + 4);
       stats.affection = clamp(stats.affection + 2);
       affectionTotal += 2;
-      engine.play('eat');
+      playAnim('eat');
       playS('eat');
       gainExp(6);
       say(stats.hunger > 90 ? '喵呜~吃撑啦，肚子圆滚滚的！' : '呜喵~好香！主人最好啦！');
-      setTimeout(() => engine.play('idle'), 1600);
+      setTimeout(() => playAnim('idle'), 1600);
       break;
     }
     case 'play': {
@@ -321,11 +431,11 @@ function doAction(act) {
       stats.hunger = clamp(stats.hunger - 4);
       stats.affection = clamp(stats.affection + 4);
       affectionTotal += 4;
-      engine.play('happy');
+      playAnim('happy');
       playS('play');
       gainExp(10);
       say('喵喵！好开心！再陪我玩一会儿嘛~');
-      setTimeout(() => engine.play('idle'), 1800);
+      setTimeout(() => playAnim('idle'), 1800);
       break;
     }
     case 'bath': {
@@ -333,22 +443,22 @@ function doAction(act) {
       stats.mood = clamp(stats.mood - 2);
       stats.affection = clamp(stats.affection + 2);
       affectionTotal += 2;
-      engine.play('sad');
+      playAnim('sad');
       playS('splash');
       gainExp(4);
       say('呜……毛都湿了，但是香香的了！');
-      setTimeout(() => engine.play('idle'), 1800);
+      setTimeout(() => playAnim('idle'), 1800);
       break;
     }
     case 'poke': {
       stats.mood = clamp(stats.mood + 3);
       stats.affection = clamp(stats.affection + 1);
       affectionTotal += 1;
-      engine.play('blink');
+      playAnim('blink');
       playS('meow');
       gainExp(2);
       say('喵！主人戳我啦~');
-      setTimeout(() => engine.play('idle'), 900);
+      setTimeout(() => playAnim('idle'), 900);
       break;
     }
     case 'chat': {
@@ -377,14 +487,16 @@ function playS(name) {
 function doWalk() {
   const dir = Math.random() < 0.5 ? -1 : 1;
   const dist = 30 + Math.random() * 60;
-  engine.facing = dir;
-  engine.play('walk');
+  if (appearanceMode === '3d' && pet3d) pet3d.setFacing(dir);
+  else if (engine) engine.facing = dir;
+  playAnim('walk');
   const start = performance.now();
   const step = () => {
     const dt = (performance.now() - start) / 1000;
     if (dt > 0.9 || dragging) {
-      engine.facing = 1;
-      engine.play('idle');
+      if (appearanceMode === '3d' && pet3d) pet3d.setFacing(1);
+      else if (engine) engine.facing = 1;
+      playAnim('idle');
       return;
     }
     window.api.movePet(dir * 2, 0);
@@ -394,6 +506,9 @@ function doWalk() {
 }
 
 function update(dt) {
+  // 3D 模式下 Pet3D 自带 rAF 循环渲染，无需在此更新
+  if (appearanceMode === '3d') return;
+  if (!engine) return;
   engine.update(dt);
   engine.draw();
 }
@@ -442,19 +557,33 @@ window.addEventListener('pointerleave', () => {
 
 canvas.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
+  beginDrag(e, canvas);
+});
+
+pet3dEl.addEventListener('pointerdown', (e) => {
+  if (appearanceMode !== '3d') return;
+  if (e.button !== 0) return;
+  const target = pet3d && pet3d.renderer ? pet3d.renderer.domElement : pet3dEl;
+  beginDrag(e, target);
+});
+
+function beginDrag(e, target) {
   dragging = true;
   dragPointerId = e.pointerId;
   dragMoved = false;
-  canvas.setPointerCapture(e.pointerId);
-  canvas.style.cursor = 'grabbing';
+  try { target.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  target.style.cursor = 'grabbing';
   window.api.setClickThrough(false);
   dragStart = { sx: e.screenX, sy: e.screenY };
   // 由主进程用 screen 光标 DIP 坐标驱动窗口跟随，避免渲染层坐标/缩放漂移
   window.api.startPetDrag();
-});
+}
 
 // 判断鼠标是否落在宠物的不透明像素上（考虑镜像翻转后的实际绘制位置）
 function isPixelInteractive(clientX, clientY) {
+  if (appearanceMode === '3d' && pet3d) {
+    return pet3d.hitTest(clientX, clientY);
+  }
   const rect = canvas.getBoundingClientRect();
   const x = clientX - rect.left;
   const y = clientY - rect.top;
@@ -498,9 +627,9 @@ window.addEventListener('pointercancel', () => {
 function endDrag() {
   if (!dragging) return;
   dragging = false;
-  canvas.style.cursor = 'grab';
+  setDragCursor('grab');
   const wasClick = !dragMoved;
-  if (dragPointerId !== null && canvas.hasPointerCapture(dragPointerId)) canvas.releasePointerCapture(dragPointerId);
+  releaseDragPointer();
   if (wasClick) tapPet();
   dragStart = null;
   dragPointerId = null;
@@ -508,15 +637,36 @@ function endDrag() {
   if (!wasClick) window.api.setClickThrough(true);
 }
 
+function dragTarget() {
+  if (appearanceMode === '3d' && pet3d) return pet3d.renderer.domElement;
+  return canvas;
+}
+
+function releaseDragPointer() {
+  if (dragPointerId === null) return;
+  const target = dragTarget();
+  try { if (target.hasPointerCapture(dragPointerId)) target.releasePointerCapture(dragPointerId); } catch (e) { /* ignore */ }
+}
+
+function setDragCursor(cursor) {
+  try { dragTarget().style.cursor = cursor; } catch (e) { /* ignore */ }
+}
+
 // 主进程兜底：光标 1 秒未移动判定拖拽结束（防止 pointerup 丢失导致拖拽状态卡死）
 window.api.onPetDragEnd(() => {
   if (!dragging) return;
   dragging = false;
-  canvas.style.cursor = 'grab';
-  if (dragPointerId !== null && canvas.hasPointerCapture(dragPointerId)) canvas.releasePointerCapture(dragPointerId);
+  setDragCursor('grab');
+  releaseDragPointer();
   dragStart = null;
   dragPointerId = null;
   window.api.setClickThrough(true);
+});
+
+pet3dEl.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (actionOpen) hideActions();
+  else showActions();
 });
 
 canvas.addEventListener('contextmenu', (e) => {

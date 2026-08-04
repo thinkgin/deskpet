@@ -1,4 +1,4 @@
-// 形象面板：7 槽位（1 系统小猫 + 6 自定义）+ 模板拼装 + 像素画布微调 + 实时预览
+// 形象面板：7 槽位（1 系统小猫 + 6 自定义）+ 模板拼装 + 像素画布微调 + 实时预览 + 3D 外观切换
 const pc = window.__pixelCompose;
 const cat = window.__catDef;
 
@@ -371,6 +371,141 @@ async function deleteCurrent() {
   setTimeout(() => (statusEl.textContent = ''), 1500);
 }
 
+// ---------- 3D 外观槽位 ----------
+let slots3D = [];
+let activeSlot3D = 0;
+
+async function loadSlots3D() {
+  try {
+    const r = await window.api.getSlots3D();
+    if (r) {
+      slots3D = Array.isArray(r.slots3D) ? r.slots3D.slice(0, 3) : [];
+      activeSlot3D = Math.max(0, Math.min(2, Number(r.activeSlot3D) || 0));
+    }
+  } catch (e) { /* ignore */ }
+  if (!slots3D.length) slots3D = [null, null, null];
+}
+
+function renderSlots3D() {
+  document.querySelectorAll('.slot3d').forEach((el) => {
+    const i = parseInt(el.dataset['3d'], 10);
+    const box = document.getElementById('slot3d-preview-' + i);
+    const nameEl = document.getElementById('slot3d-name-' + i);
+    const importBtn = el.querySelector('.slot3d-btn-import');
+    const removeBtn = el.querySelector('.slot3d-btn-remove');
+    const slot = slots3D[i];
+    box.innerHTML = '';
+    const mark = document.createElement('span');
+    box.appendChild(mark);
+    if (slot && slot.type === 'glb') {
+      mark.textContent = '3D';
+      nameEl.textContent = (slot.name) || ('模型 ' + (i + 1));
+      if (importBtn) importBtn.textContent = '替换 GLB';
+      if (removeBtn) removeBtn.style.display = '';
+    } else {
+      mark.textContent = '+';
+      nameEl.textContent = '未导入';
+      if (importBtn) importBtn.textContent = '导入 GLB';
+      if (removeBtn) removeBtn.style.display = 'none';
+    }
+    el.classList.toggle('empty', !slot);
+    el.classList.toggle('active', !!slot && i === activeSlot3D);
+  });
+}
+
+async function useSlot3D(i) {
+  if (!slots3D[i]) {
+    statusEl.textContent = '请先点击「导入 GLB」导入模型';
+    setTimeout(() => (statusEl.textContent = ''), 1800);
+    return;
+  }
+  let petName = '';
+  try {
+    const s = await window.api.loadSettings();
+    petName = (s && s.petName) || '';
+  } catch (e) { /* ignore */ }
+  await window.api.saveSlots3D({ activeSlot3D: i });
+  await window.api.saveAppearance({ activePetId: '3d:' + i, petName });
+  activePetId = '3d:' + i;
+  statusEl.textContent = '已切换到 3D 外观「' + ((slots3D[i] && slots3D[i].name) || (i + 1)) + '」，宠物窗口将更新 ✓';
+  setTimeout(() => (statusEl.textContent = ''), 1500);
+}
+
+async function importSlot3D(i) {
+  const r = await window.api.importGlb(i);
+  if (r && r.ok) {
+    slots3D = r.slots3D.slice(0, 3);
+    activeSlot3D = i;
+    let petName = '';
+    try {
+      const s = await window.api.loadSettings();
+      petName = (s && s.petName) || '';
+    } catch (e) { /* ignore */ }
+    await window.api.saveSlots3D({ activeSlot3D: i });
+    await window.api.saveAppearance({ activePetId: '3d:' + i, petName });
+    activePetId = '3d:' + i;
+    renderSlots3D();
+    statusEl.textContent = '模型已导入并切换使用 ✓';
+    setTimeout(() => (statusEl.textContent = ''), 1800);
+  } else if (!(r && r.canceled)) {
+    statusEl.textContent = '导入失败：' + ((r && r.error) || '未知错误');
+    setTimeout(() => (statusEl.textContent = ''), 3000);
+  }
+}
+
+async function removeSlot3D(i) {
+  if (!slots3D[i]) return;
+  if (!confirm('确定移除槽位 ' + (i + 1) + ' 的模型吗？')) return;
+  const next = slots3D.slice();
+  next[i] = null;
+  await window.api.saveSlots3D({ slots3D: next });
+  await loadSlots3D();
+  if (activePetId === '3d:' + i) {
+    activePetId = 'cat';
+    try {
+      const s = await window.api.loadSettings();
+      await window.api.saveAppearance({ activePetId: 'cat', petName: (s && s.petName) || '' });
+    } catch (e) { /* ignore */ }
+    refreshSlots();
+  }
+  renderSlots3D();
+  statusEl.textContent = '已移除模型 ✓';
+  setTimeout(() => (statusEl.textContent = ''), 1800);
+}
+
+function bindSlots3DClicks() {
+  document.querySelectorAll('.slot3d').forEach((el) => {
+    el.addEventListener('click', () => {
+      const i = parseInt(el.dataset['3d'], 10);
+      if (!slots3D[i]) {
+        statusEl.textContent = '请先点击「导入 GLB」导入模型';
+        setTimeout(() => (statusEl.textContent = ''), 1800);
+        return;
+      }
+      if (i === activeSlot3D) return;
+      activeSlot3D = i;
+      renderSlots3D();
+      useSlot3D(i);
+    });
+    const importBtn = el.querySelector('.slot3d-btn-import');
+    if (importBtn) {
+      importBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const i = parseInt(el.dataset['3d'], 10);
+        importSlot3D(i);
+      });
+    }
+    const removeBtn = el.querySelector('.slot3d-btn-remove');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const i = parseInt(el.dataset['3d'], 10);
+        removeSlot3D(i);
+      });
+    }
+  });
+}
+
 // ---------- 动画循环 ----------
 function tick() {
   if (previewEngine) {
@@ -404,8 +539,11 @@ window.addEventListener('keydown', (e) => {
   const data = await window.api.getAppearance();
   customPets = ((data.customPets || [null, null, null, null, null, null]).slice(0, 6)).map((cp) => pc.migrateCustom(cp ? { ...cp } : cp));
   activePetId = data.activePetId || 'cat';
+  await loadSlots3D();
   refreshSlots();
+  renderSlots3D();
   bindSlotClicks();
+  bindSlots3DClicks();
   bindOptionListeners();
   bindCanvasEvents();
   // 默认选中当前使用的槽位

@@ -29,6 +29,12 @@ html, body {
   cursor: grab;
 }
 
+#pet3d {
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+
 #bubble {
   position: absolute;
   top: 4px;

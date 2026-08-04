@@ -10,8 +10,38 @@
   <div id="app">
     <header>
       <h1>形象面板</h1>
-      <div class="sub">系统小猫固定保留，另有 6 个自定义形象槽位，可自由拼装与涂画</div>
+      <div class="sub">系统小猫固定保留，另有 6 个自定义形象槽位；3D 外观在此导入并切换 GLB 模型。</div>
     </header>
+
+    <section id="slots3d">
+      <div class="slot3d-title">3D 外观（点击槽位切换，导入/替换/移除在此操作）</div>
+      <div class="slot3d-list">
+        <div class="slot3d" data-3d="0">
+          <div class="slot3d-preview" id="slot3d-preview-0"></div>
+          <div class="slot3d-name" id="slot3d-name-0">未导入</div>
+          <div class="slot3d-actions">
+            <button class="slot3d-btn slot3d-btn-import" data-3d="0">导入 GLB</button>
+            <button class="slot3d-btn slot3d-btn-remove" data-3d="0" style="display:none">移除</button>
+          </div>
+        </div>
+        <div class="slot3d" data-3d="1">
+          <div class="slot3d-preview" id="slot3d-preview-1"></div>
+          <div class="slot3d-name" id="slot3d-name-1">未导入</div>
+          <div class="slot3d-actions">
+            <button class="slot3d-btn slot3d-btn-import" data-3d="1">导入 GLB</button>
+            <button class="slot3d-btn slot3d-btn-remove" data-3d="1" style="display:none">移除</button>
+          </div>
+        </div>
+        <div class="slot3d" data-3d="2">
+          <div class="slot3d-preview" id="slot3d-preview-2"></div>
+          <div class="slot3d-name" id="slot3d-name-2">未导入</div>
+          <div class="slot3d-actions">
+            <button class="slot3d-btn slot3d-btn-import" data-3d="2">导入 GLB</button>
+            <button class="slot3d-btn slot3d-btn-remove" data-3d="2" style="display:none">移除</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <section id="slots">
       <div class="slot system" data-idx="-1">

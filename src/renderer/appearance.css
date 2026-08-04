@@ -19,6 +19,43 @@ header .sub { font-size: 12px; color: #a08a72; margin-top: 4px; }
   margin-bottom: 16px;
 }
 
+#slots3d { margin-bottom: 16px; }
+.slot3d-title { font-size: 12px; color: #6b5644; font-weight: 600; margin-bottom: 8px; }
+.slot3d-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.slot3d {
+  border: 2px solid #d9c9b8;
+  border-radius: 12px;
+  padding: 8px 4px;
+  text-align: center;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+.slot3d:hover { background: #fff6ea; }
+.slot3d.active { border-color: #4a3b35; background: #ffe9d0; }
+.slot3d.empty { cursor: default; opacity: .65; }
+.slot3d-preview {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.slot3d-preview span { color: #8a6d50; font-size: 18px; font-weight: 700; }
+.slot3d-name { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot3d-actions { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
+.slot3d-btn {
+  padding: 4px 8px; border: 1.5px solid #4a3b35; border-radius: 6px;
+  background: #fff; color: #4a3b35; font-size: 11px; cursor: pointer;
+  transition: background 0.15s;
+}
+.slot3d-btn:hover { background: #ffe9d0; }
+.slot3d-btn-import { background: #4a3b35; color: #fff; }
+.slot3d-btn-import:hover { background: #5d4a40; }
+.slot3d-btn-remove { border-color: #c0392b; color: #c0392b; }
+
 .slot {
   border: 2px solid #d9c9b8;
   border-radius: 12px;

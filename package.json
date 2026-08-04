@@ -1,7 +1,7 @@
 {
   "name": "deskpet",
   "productName": "桌面宠物·陪伴",
-  "version": "1.26.0",
+  "version": "1.27.0",
   "description": "像素风桌面宠物，支持 AI 陪聊与 3D 模型外观",
   "main": "main.js",
   "author": "deskpet",

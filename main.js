@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, Notification, screen, nativeImage, dialog } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, Notification, screen, nativeImage, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
@@ -45,6 +45,7 @@ const defaultSettings = {
   petBirthday: '', // YYYY-MM-DD，空则不显示岁数
   soundOn: true,
   autoWalk: true,
+  fileEatEnabled: false, // 文件投喂：拖拽/右键投喂文件，进入回收站
   petScale: 5,
   aiApiKey: '',
   aiBaseUrl: 'https://api.openai.com/v1',
@@ -847,6 +848,42 @@ ipcMain.handle('models3d:save', (e, data) => {
   return { slots3D: merged.slots3D, activeSlot3D: merged.activeSlot3D };
 });
 ipcMain.handle('chat:send', (e, messages) => chatAI(messages));
+
+// ---------- 文件投喂：选中的文件进入回收站 ----------
+ipcMain.handle('file:feed', async () => {
+  const win = BrowserWindow.getFocusedWindow() || petWin || settingsWin || appearanceWin;
+  const res = await dialog.showOpenDialog(win, {
+    title: '投喂文件（将进入回收站）',
+    properties: ['openFile', 'multiSelections'],
+  });
+  if (res.canceled || !res.filePaths.length) return { ok: false, canceled: true };
+  const results = [];
+  for (const fp of res.filePaths) {
+    try {
+      await shell.trashItem(fp);
+      results.push({ name: path.basename(fp), ok: true });
+    } catch (err) {
+      results.push({ name: path.basename(fp), ok: false });
+    }
+  }
+  const okResults = results.filter((r) => r.ok);
+  return { ok: true, count: okResults.length, total: results.length, names: okResults.map((r) => r.name) };
+});
+
+// 直接传入路径删除到回收站（供拖拽投喂使用）
+ipcMain.handle('file:trash', async (e, filePaths) => {
+  if (!Array.isArray(filePaths) || !filePaths.length) return { ok: false, count: 0 };
+  let count = 0;
+  const names = [];
+  for (const fp of filePaths) {
+    try {
+      await shell.trashItem(fp);
+      count++;
+      names.push(path.basename(fp));
+    } catch (err) { /* 跳过失败的文件 */ }
+  }
+  return { ok: count > 0, count, names };
+});
 ipcMain.handle('greeting:get', () => ({ greeting: getGreeting(), festival: getFestival() }));
 ipcMain.handle('providers:get', () => OPENCODE_PRESETS.map((p, i) => ({ id: `template-${i}`, ...p, apiKey: '' })));
 

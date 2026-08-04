@@ -7,6 +7,7 @@ const petAgeText = document.getElementById('petAgeText');
 const petScale = document.getElementById('petScale');
 const soundOn = document.getElementById('soundOn');
 const autoWalk = document.getElementById('autoWalk');
+const fileEatEnabled = document.getElementById('fileEatEnabled');
 
 const autoStart = document.getElementById('autoStart');
 const shutdownMode = document.getElementById('shutdownMode');
@@ -187,6 +188,7 @@ function onShutdownModeChange() {
   petScale.value = String(Math.min(Math.max(Number(settings.petScale) || 5, 3), 12));
   soundOn.checked = settings.soundOn !== false;
   autoWalk.checked = settings.autoWalk !== false;
+  fileEatEnabled.checked = settings.fileEatEnabled === true;
   activeEffort.value = settings.activeReasoningEffort || 'medium';
 
   autoStart.checked = await window.api.getAutoStart();
@@ -258,6 +260,7 @@ function collect() {
     petScale: Number(petScale.value) || 5,
     soundOn: soundOn.checked,
     autoWalk: autoWalk.checked,
+    fileEatEnabled: fileEatEnabled.checked,
     providers,
     activeProviderId: settings.activeProviderId,
     activeModel: settings.activeModel,

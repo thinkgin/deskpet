@@ -202,6 +202,7 @@ async function loadAll() {
   applyDecay(state.lastSavedAt || Date.now());
   await refreshGrowth();
   resizeWindow();
+  applyFileEatToggle();
 }
 
 async function loadSlots3D() {
@@ -410,7 +411,7 @@ async function runGreeting() {
   }
 }
 
-function doAction(act) {
+async function doAction(act) {
   hideActions();
   const before = { ...stats };
   switch (act) {
@@ -463,6 +464,23 @@ function doAction(act) {
     }
     case 'chat': {
       window.api.toggleChat();
+      break;
+    }
+    case 'feedfile': {
+      const r = await window.api.feedFiles();
+      if (r && r.ok && r.count > 0) {
+        stats.hunger = clamp(stats.hunger + 8);
+        stats.affection = clamp(stats.affection + 2);
+        affectionTotal += 2;
+        playAnim('eat');
+        playS('eat');
+        gainExp(4);
+        const label = r.names.length === 1 ? r.names[0] : r.names.length + '个文件';
+        say(`啊呜~一口吞了「${label}」！已经帮你丢进回收站啦~`);
+        setTimeout(() => playAnim('idle'), 2000);
+      } else if (!(r && r.canceled)) {
+        say('呜…没有选文件呢…');
+      }
       break;
     }
     case 'appearance': {
@@ -693,6 +711,58 @@ window.api.onTrayAction((action) => {
 window.api.onSettingsChanged(() => {
   window.location.reload();
 });
+
+// ---------- 文件投喂：拖拽扔文件到宠物身上 ----------
+let fileDragCounter = 0;
+
+function applyFileEatToggle() {
+  const btn = document.getElementById('act-feedfile');
+  if (btn) btn.style.display = settings && settings.fileEatEnabled ? '' : 'none';
+  setupFileDrop();
+}
+
+function setupFileDrop() {
+  if (!settings || !settings.fileEatEnabled) return;
+  document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    fileDragCounter++;
+    if (fileDragCounter === 1) stage.classList.add('file-drag-over');
+  });
+  document.addEventListener('dragleave', () => {
+    fileDragCounter--;
+    if (fileDragCounter <= 0) {
+      fileDragCounter = 0;
+      stage.classList.remove('file-drag-over');
+    }
+  });
+  document.addEventListener('dragover', (e) => { e.preventDefault(); });
+  document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    fileDragCounter = 0;
+    stage.classList.remove('file-drag-over');
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || !files.length) return;
+    const paths = [];
+    for (const f of files) {
+      if (f.path) paths.push(f.path);
+    }
+    if (!paths.length) return;
+    const r = await window.api.trashFiles(paths);
+    if (r && r.ok && r.count > 0) {
+      stats.hunger = clamp(stats.hunger + 8);
+      stats.affection = clamp(stats.affection + 2);
+      affectionTotal += 2;
+      playAnim('eat');
+      playS('eat');
+      gainExp(4);
+      const label = r.names.length === 1 ? r.names[0] : r.names.length + '个文件';
+      say(`啊呜~一口吞了「${label}」！已经帮你丢进回收站啦~`);
+      setTimeout(() => playAnim('idle'), 2000);
+    } else {
+      say('呜…这个文件吞不下…');
+    }
+  });
+}
 
 (async () => {
   await loadAll();

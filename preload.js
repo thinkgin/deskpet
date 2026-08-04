@@ -49,6 +49,8 @@ contextBridge.exposeInMainWorld('api', {
   getShutdownStatus: () => ipcRenderer.invoke('shutdown:getStatus'),
   scheduleShutdown: (cfg) => ipcRenderer.invoke('shutdown:schedule', cfg),
   cancelShutdown: () => ipcRenderer.invoke('shutdown:cancel'),
+  feedFiles: () => ipcRenderer.invoke('file:feed'),
+  trashFiles: (paths) => ipcRenderer.invoke('file:trash', paths),
   close: () => ipcRenderer.send('pet:close'),
   onTrayAction: (cb) => ipcRenderer.on('tray:action', (e, action) => cb(action)),
   onPetDragEnd: (cb) => ipcRenderer.on('pet:dragEnd', () => cb()),

@@ -120,8 +120,4 @@ html, body {
   transform: scale(1.08);
 }
 
-/* 文件拖拽投喂状态：柔光只贴合宠物轮廓，不画窗框 */
-#stage.file-drag-over #pet,
-#stage.file-drag-over #pet3d {
-  filter: drop-shadow(0 0 10px rgba(76, 175, 80, 0.55));
-}
+/* 文件拖拽投喂状态：仅靠宠物表情动画反馈，不显示任何背景/光晕 */

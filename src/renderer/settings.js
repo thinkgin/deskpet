@@ -126,11 +126,22 @@ function renderModelSelect() {
 // ---------- 宠物形象选择 ----------
 function renderPetOptions() {
   petSel.innerHTML = '';
-  PETS.forEach((p) => {
+  const add = (value, name) => {
     const o = document.createElement('option');
-    o.value = p.id;
-    o.textContent = p.name;
+    o.value = value;
+    o.textContent = name;
     petSel.appendChild(o);
+  };
+  PETS.forEach((p) => add(p.id, p.name));
+  // 自定义像素形象 custom:0 ~ custom:5
+  const customPets = Array.isArray(settings.customPets) ? settings.customPets : [];
+  customPets.forEach((cp, i) => {
+    if (cp && cp.name) add('custom:' + i, '自定义 · ' + cp.name);
+  });
+  // 3D 模型槽位 3d:0 ~ 3d:2
+  const slots3D = Array.isArray(settings.slots3D) ? settings.slots3D : [];
+  slots3D.forEach((slot, i) => {
+    if (slot && slot.type === 'glb' && slot.name) add('3d:' + i, '3D · ' + slot.name);
   });
   petSel.value = settings.petId || 'cat';
 }
@@ -173,12 +184,6 @@ function onShutdownModeChange() {
 (async () => {
   settings = await window.api.loadSettings();
   providers = Array.isArray(settings.providers) ? settings.providers : [];
-  PETS.forEach((p) => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.name;
-    petSel.appendChild(opt);
-  });
   renderPetOptions();
   petName.value = settings.petName || '';
   masterAddress.value = settings.masterAddress || '主人';

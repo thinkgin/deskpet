@@ -11,7 +11,7 @@
     "icon": "node scripts/make-icon.js",
     "preview": "node scripts/preview-pet.js",
     "build:3d": "esbuild src/renderer/pet3d-src.js --bundle --format=iife --outfile=src/renderer/pet3d.js --define:process.env.NODE_ENV='\"production\"' --minify",
-    "pack": "npm run build:3d && electron-builder --win nsis --x64",
+    "pack": "npm run build:3d && electron-builder --win nsis --x64 && node scripts/clean-dist.js",
     "pack:dir": "npm run build:3d && electron-builder --win dir --x64"
   },
   "devDependencies": {

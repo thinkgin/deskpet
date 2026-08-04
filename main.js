@@ -238,6 +238,67 @@ function cfgModeNext(cfg) {
   return parseTimeToNext(cfg.time);
 }
 
+// ---------- 文件投喂：主进程光标轮询（穿透窗口无法直接接收拖拽事件）----------
+let dragPollTimer = null;
+let dragPollActive = false;
+let dragPollTimeout = null;
+
+function startFileDragPoll() {
+  if (dragPollTimer) return;
+  dragPollTimer = setInterval(() => {
+    if (!petWin || petWin.isDestroyed()) return;
+    const s = getSettings();
+    if (!s.fileEatEnabled) { stopFileDragPoll(); return; }
+    const cursor = screen.getCursorScreenPoint();
+    const bounds = petWin.getBounds();
+    const inBounds = cursor.x >= bounds.x && cursor.x <= bounds.x + bounds.width &&
+                     cursor.y >= bounds.y && cursor.y <= bounds.y + bounds.height;
+    if (inBounds && !dragPollActive) {
+      dragPollActive = true;
+      petWin.setIgnoreMouseEvents(false);
+      petWin.webContents.send('file:dragEnter');
+      if (dragPollTimeout) clearTimeout(dragPollTimeout);
+      dragPollTimeout = setTimeout(() => {
+        if (dragPollActive) {
+          dragPollActive = false;
+          if (petWin && !petWin.isDestroyed()) {
+            petWin.setIgnoreMouseEvents(true, { forward: true });
+            petWin.webContents.send('file:dragLeave');
+          }
+        }
+      }, 2500);
+    }
+    if (!inBounds && dragPollActive) {
+      dragPollActive = false;
+      if (dragPollTimeout) { clearTimeout(dragPollTimeout); dragPollTimeout = null; }
+      petWin.setIgnoreMouseEvents(true, { forward: true });
+      petWin.webContents.send('file:dragLeave');
+    }
+  }, 200);
+}
+
+function stopFileDragPoll() {
+  if (dragPollTimer) { clearInterval(dragPollTimer); dragPollTimer = null; }
+  if (dragPollTimeout) { clearTimeout(dragPollTimeout); dragPollTimeout = null; }
+  if (dragPollActive) {
+    dragPollActive = false;
+    if (petWin && !petWin.isDestroyed()) {
+      petWin.setIgnoreMouseEvents(true, { forward: true });
+      petWin.webContents.send('file:dragLeave');
+    }
+  }
+}
+
+ipcMain.on('file:dropDone', () => {
+  if (dragPollActive) {
+    dragPollActive = false;
+    if (dragPollTimeout) { clearTimeout(dragPollTimeout); dragPollTimeout = null; }
+    if (petWin && !petWin.isDestroyed()) {
+      petWin.setIgnoreMouseEvents(true, { forward: true });
+    }
+  }
+});
+
 function getPetWindowSize() {
   const scale = Math.min(Math.max(Number(getSettings().petScale) || 5, 3), 12);
   const w = Math.max(16 * scale + 40, 120);
@@ -281,6 +342,9 @@ function createPetWindow() {
     });
   }
   petWin.loadFile(path.join(__dirname, 'src', 'renderer', 'index.html'));
+  petWin.webContents.on('did-finish-load', () => {
+    if (getSettings().fileEatEnabled) startFileDragPoll();
+  });
   petWin.on('closed', () => {
     petWin = null;
     if (!isQuitting) createPetWindow();
@@ -1130,6 +1194,16 @@ ipcMain.on('pet:bubbleHide', () => {
 ipcMain.on('pet:setClickThrough', (e, flag) => {
   if (!petWin) petWin = null;
   if (petWin) petWin.setIgnoreMouseEvents(!!flag, { forward: true });
+
+  // 文件投喂特供：如果设置开启了投喂，通知主进程光标在宠物区域内
+  if (petWin) {
+    const s = getSettings();
+    if (s.fileEatEnabled) {
+      if (!dragPollTimer) startFileDragPoll();
+    } else {
+      stopFileDragPoll();
+    }
+  }
 });
 
 ipcMain.on('chat:toggle', () => toggleChat());

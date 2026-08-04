@@ -202,7 +202,7 @@ async function loadAll() {
   applyDecay(state.lastSavedAt || Date.now());
   await refreshGrowth();
   resizeWindow();
-  applyFileEatToggle();
+  setupFileDrop();
 }
 
 async function loadSlots3D() {
@@ -466,23 +466,6 @@ async function doAction(act) {
       window.api.toggleChat();
       break;
     }
-    case 'feedfile': {
-      const r = await window.api.feedFiles();
-      if (r && r.ok && r.count > 0) {
-        stats.hunger = clamp(stats.hunger + 8);
-        stats.affection = clamp(stats.affection + 2);
-        affectionTotal += 2;
-        playAnim('eat');
-        playS('eat');
-        gainExp(4);
-        const label = r.names.length === 1 ? r.names[0] : r.names.length + '个文件';
-        say(`啊呜~一口吞了「${label}」！已经帮你丢进回收站啦~`);
-        setTimeout(() => playAnim('idle'), 2000);
-      } else if (!(r && r.canceled)) {
-        say('呜…没有选文件呢…');
-      }
-      break;
-    }
     case 'appearance': {
       window.api.openAppearance();
       break;
@@ -713,33 +696,33 @@ window.api.onSettingsChanged(() => {
 });
 
 // ---------- 文件投喂：拖拽扔文件到宠物身上 ----------
-let fileDragCounter = 0;
-
-function applyFileEatToggle() {
-  const btn = document.getElementById('act-feedfile');
-  if (btn) btn.style.display = settings && settings.fileEatEnabled ? '' : 'none';
-  setupFileDrop();
-}
+let fileDragArmed = false; // 主进程通知光标在宠物区域内，准备接收拖拽
 
 function setupFileDrop() {
   if (!settings || !settings.fileEatEnabled) return;
-  document.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    fileDragCounter++;
-    if (fileDragCounter === 1) stage.classList.add('file-drag-over');
+
+  // 主进程轮询检测到光标进入宠物区域 → 暂时关闭点击穿透
+  window.api.onFileDragEnter(() => {
+    if (fileDragArmed) return;
+    fileDragArmed = true;
+    stage.classList.add('file-drag-over');
   });
-  document.addEventListener('dragleave', () => {
-    fileDragCounter--;
-    if (fileDragCounter <= 0) {
-      fileDragCounter = 0;
-      stage.classList.remove('file-drag-over');
-    }
+
+  // 光标离开或超时 → 恢复穿透
+  window.api.onFileDragLeave(() => {
+    if (!fileDragArmed) return;
+    fileDragArmed = false;
+    stage.classList.remove('file-drag-over');
   });
+
   document.addEventListener('dragover', (e) => { e.preventDefault(); });
+
   document.addEventListener('drop', async (e) => {
     e.preventDefault();
-    fileDragCounter = 0;
     stage.classList.remove('file-drag-over');
+    fileDragArmed = false;
+    // 通知主进程恢复穿透
+    window.api.fileDropDone();
     const files = e.dataTransfer && e.dataTransfer.files;
     if (!files || !files.length) return;
     const paths = [];
